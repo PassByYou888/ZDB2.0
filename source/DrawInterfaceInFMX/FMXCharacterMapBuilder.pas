@@ -19,7 +19,7 @@
 { ****************************************************************************** }
 unit FMXCharacterMapBuilder;
 
-{$INCLUDE ..\..\zDefine.inc}
+{$INCLUDE ..\zDefine.inc}
 
 interface
 

@@ -19,7 +19,7 @@
 { ****************************************************************************** }
 unit zDrawEngineInterface_FMX;
 
-{$INCLUDE ..\..\zDefine.inc}
+{$INCLUDE ..\zDefine.inc}
 
 interface
 

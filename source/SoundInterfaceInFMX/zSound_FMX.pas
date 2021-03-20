@@ -9,7 +9,7 @@
 { ****************************************************************************** }
 unit zSound_FMX;
 
-{$INCLUDE ..\..\zDefine.inc}
+{$INCLUDE ..\zDefine.inc}
 
 interface
 

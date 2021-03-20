@@ -19,7 +19,7 @@
 { ****************************************************************************** }
 unit zSound_Bass;
 
-{$INCLUDE ..\..\zDefine.inc}
+{$INCLUDE ..\zDefine.inc}
 
 interface
 
