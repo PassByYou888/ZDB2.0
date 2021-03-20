@@ -1,0 +1,72 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{DDBB6813-DB6B-49B8-AE7D-FAF2898ED096}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="ZDB2FileDecoder\ZDB2FileDecoder.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ZDB2FileEncoder\ZDB2FileEncoder.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ZDB2CoreTest\ZDB2CoreTest.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ZDBPerfTest\ZDBPerfTest.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="ZDB2FileDecoder">
+        <MSBuild Projects="ZDB2FileDecoder\ZDB2FileDecoder.dproj"/>
+    </Target>
+    <Target Name="ZDB2FileDecoder:Clean">
+        <MSBuild Projects="ZDB2FileDecoder\ZDB2FileDecoder.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ZDB2FileDecoder:Make">
+        <MSBuild Projects="ZDB2FileDecoder\ZDB2FileDecoder.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ZDB2FileEncoder">
+        <MSBuild Projects="ZDB2FileEncoder\ZDB2FileEncoder.dproj"/>
+    </Target>
+    <Target Name="ZDB2FileEncoder:Clean">
+        <MSBuild Projects="ZDB2FileEncoder\ZDB2FileEncoder.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ZDB2FileEncoder:Make">
+        <MSBuild Projects="ZDB2FileEncoder\ZDB2FileEncoder.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ZDB2CoreTest">
+        <MSBuild Projects="ZDB2CoreTest\ZDB2CoreTest.dproj"/>
+    </Target>
+    <Target Name="ZDB2CoreTest:Clean">
+        <MSBuild Projects="ZDB2CoreTest\ZDB2CoreTest.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ZDB2CoreTest:Make">
+        <MSBuild Projects="ZDB2CoreTest\ZDB2CoreTest.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ZDBPerfTest">
+        <MSBuild Projects="ZDBPerfTest\ZDBPerfTest.dproj"/>
+    </Target>
+    <Target Name="ZDBPerfTest:Clean">
+        <MSBuild Projects="ZDBPerfTest\ZDBPerfTest.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ZDBPerfTest:Make">
+        <MSBuild Projects="ZDBPerfTest\ZDBPerfTest.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="ZDB2FileDecoder;ZDB2FileEncoder;ZDB2CoreTest;ZDBPerfTest"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="ZDB2FileDecoder:Clean;ZDB2FileEncoder:Clean;ZDB2CoreTest:Clean;ZDBPerfTest:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="ZDB2FileDecoder:Make;ZDB2FileEncoder:Make;ZDB2CoreTest:Make;ZDBPerfTest:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
