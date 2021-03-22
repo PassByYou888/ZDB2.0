@@ -70,7 +70,7 @@ type
   TZDB2_File_Encoder = class
   private
     FZDB2: TZDB2_Core_Space;
-    FPlace: TZDB2_PlaceSpace;
+    FPlace: TZDB2_SpacePlan;
     FIOThread: TIO_Thread;
     FEncoderFiles: TZDB2_FIL;
     FMaxQueue: Integer;
@@ -232,7 +232,7 @@ begin
   FZDB2 := TZDB2_Core_Space.Create(P);
   FZDB2.AutoCloseIOHnd := True;
   FZDB2.AutoFreeIOHnd := True;
-  FPlace := TZDB2_PlaceSpace.Create(FZDB2);
+  FPlace := TZDB2_SpacePlan.Create(FZDB2);
 
   FIOThread := TIO_Thread.Create(ThNum_);
   FEncoderFiles := TZDB2_FIL.Create;
@@ -295,8 +295,7 @@ var
             TCompute.Sleep(1);
       end;
 
-    while FIOThread.Count > 0 do
-        TCompute.Sleep(1);
+    FIOThread.Wait();
     Activted.V := False;
   end;
 {$ENDIF FPC}
@@ -354,8 +353,7 @@ begin
               TCompute.Sleep(1);
         end;
 
-      while FIOThread.Count > 0 do
-          TCompute.Sleep(1);
+      FIOThread.Wait();
       Activted.V := False;
     end);
 {$ENDIF FPC}
@@ -627,8 +625,7 @@ var
             break;
       end;
 
-    while FIOThread.Count > 0 do
-        TCompute.Sleep(1);
+    FIOThread.Wait();
     Activted.V := False;
   end;
 {$ENDIF FPC}
@@ -660,8 +657,7 @@ begin
               break;
         end;
 
-      while FIOThread.Count > 0 do
-          TCompute.Sleep(1);
+      FIOThread.Wait();
       Activted.V := False;
     end);
 {$ENDIF FPC}

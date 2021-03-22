@@ -66,15 +66,14 @@ type
   TIO_Interface = interface
     function Count(): Integer;
     property QueueCount: Integer read Count;
-    // encrypt input data to pool
     procedure EnQueue(Queue_: TIODataQueue); overload;
     procedure EnQueue(IOData: TIOData); overload;
     procedure EnQueueC(IOData: TIOData; Data: Pointer; OnCall: TIOThread_Call);
     procedure EnQueueM(IOData: TIOData; Data: Pointer; OnMethod: TIOThread_Method);
     procedure EnQueueP(IOData: TIOData; Data: Pointer; OnProc: TIOThread_Proc);
-    // decrypt data state is done from pool
     function DeQueue(wait_: Boolean): TIOData; overload;
     procedure DeQueue(wait_: Boolean; Queue_: TIODataQueue); overload;
+    procedure Wait;
   end;
 
   TIO_Thread = class(TCoreClassInterfacedObject, TIO_Interface)
@@ -93,15 +92,14 @@ type
 
     function Count(): Integer;
     property QueueCount: Integer read Count;
-    // encrypt input data to pool
     procedure EnQueue(Queue_: TIODataQueue); overload;
     procedure EnQueue(IOData: TIOData); overload;
     procedure EnQueueC(IOData: TIOData; Data: Pointer; OnCall: TIOThread_Call);
     procedure EnQueueM(IOData: TIOData; Data: Pointer; OnMethod: TIOThread_Method);
     procedure EnQueueP(IOData: TIOData; Data: Pointer; OnProc: TIOThread_Proc);
-    // decrypt data state is done from pool
     function DeQueue(wait_: Boolean): TIOData; overload;
     procedure DeQueue(wait_: Boolean; Queue_: TIODataQueue); overload;
+    procedure Wait;
 
     class procedure Test();
   end;
@@ -118,15 +116,14 @@ type
 
     function Count(): Integer;
     property QueueCount: Integer read Count;
-    // encrypt input data to pool
     procedure EnQueue(Queue_: TIODataQueue); overload;
     procedure EnQueue(IOData: TIOData); overload;
     procedure EnQueueC(IOData: TIOData; Data: Pointer; OnCall: TIOThread_Call);
     procedure EnQueueM(IOData: TIOData; Data: Pointer; OnMethod: TIOThread_Method);
     procedure EnQueueP(IOData: TIOData; Data: Pointer; OnProc: TIOThread_Proc);
-    // decrypt data state is done from pool
     function DeQueue(wait_: Boolean): TIOData; overload;
     procedure DeQueue(wait_: Boolean; Queue_: TIODataQueue); overload;
+    procedure Wait;
 
     class procedure Test();
   end;
@@ -448,6 +445,12 @@ begin
   until (not wait_) or (n = 0) or (doneNum = 0);
 end;
 
+procedure TIO_Thread.Wait;
+begin
+  while Count > 0 do
+      TCompute.Sleep(1);
+end;
+
 class procedure TIO_Thread.Test();
 var
   i: Integer;
@@ -594,6 +597,12 @@ begin
       end;
     FCritical.UnLock;
   until (not wait_) or (n = 0) or (doneNum = 0);
+end;
+
+procedure TIO_Direct.Wait;
+begin
+  while Count > 0 do
+      TCompute.Sleep(1);
 end;
 
 class procedure TIO_Direct.Test;
