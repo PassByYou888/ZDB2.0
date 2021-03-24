@@ -1778,14 +1778,16 @@ type
 type
   TCipher_Base = class(TCoreClassObject)
   protected
+    FKeyBuffer: TCipherKeyBuffer;
     FLevel: Integer;
     FProcessTail: Boolean;
     FCBC: Boolean;
   public
+    property KeyBuffer: TCipherKeyBuffer read FKeyBuffer;
     property Level: Integer read FLevel write FLevel;
     property ProcessTail: Boolean read FProcessTail write FProcessTail;
     property CBC: Boolean read FCBC write FCBC;
-    constructor Create(KeyBuff_: TCipherKeyBuffer); virtual;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); virtual;
     destructor Destroy; override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); virtual;
     procedure Decrypt(sour: Pointer; Size: NativeInt); virtual;
@@ -1797,7 +1799,7 @@ type
   private
     FDKey, FEkey: TDESContext;
   public
-    constructor Create(KeyBuff_: TCipherKeyBuffer); override;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); override;
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
@@ -1806,7 +1808,7 @@ type
   private
     FDKey, FEkey: TTripleDESContext;
   public
-    constructor Create(KeyBuff_: TCipherKeyBuffer); override;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); override;
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
@@ -1815,7 +1817,7 @@ type
   private
     FDKey, FEkey: TTripleDESContext3Key;
   public
-    constructor Create(KeyBuff_: TCipherKeyBuffer); override;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); override;
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
@@ -1824,7 +1826,7 @@ type
   private
     Fkey: TBFContext;
   public
-    constructor Create(KeyBuff_: TCipherKeyBuffer); override;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); override;
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
@@ -1833,7 +1835,7 @@ type
   private
     FDKey, FEkey: TLBCContext;
   public
-    constructor Create(KeyBuff_: TCipherKeyBuffer); override;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); override;
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
@@ -1842,7 +1844,7 @@ type
   private
     Fkey: TKey128;
   public
-    constructor Create(KeyBuff_: TCipherKeyBuffer); override;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); override;
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
@@ -1851,7 +1853,7 @@ type
   private
     Fkey: TRNG32Context;
   public
-    constructor Create(KeyBuff_: TCipherKeyBuffer); override;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); override;
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
@@ -1860,7 +1862,7 @@ type
   private
     Fkey: TRNG64Context;
   public
-    constructor Create(KeyBuff_: TCipherKeyBuffer); override;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); override;
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
@@ -1869,7 +1871,7 @@ type
   private
     Fkey: TLSCContext;
   public
-    constructor Create(KeyBuff_: TCipherKeyBuffer); override;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); override;
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
@@ -1878,7 +1880,7 @@ type
   private
     Fkey: TKey128;
   public
-    constructor Create(KeyBuff_: TCipherKeyBuffer); override;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); override;
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
@@ -1887,7 +1889,7 @@ type
   private
     Fkey: TRC6Key;
   public
-    constructor Create(KeyBuff_: TCipherKeyBuffer); override;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); override;
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
@@ -1896,7 +1898,7 @@ type
   private
     Fkey: TSerpentkey;
   public
-    constructor Create(KeyBuff_: TCipherKeyBuffer); override;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); override;
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
@@ -1905,7 +1907,7 @@ type
   private
     Fkey: TMarskey;
   public
-    constructor Create(KeyBuff_: TCipherKeyBuffer); override;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); override;
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
@@ -1914,7 +1916,7 @@ type
   private
     Fkey: TRijndaelkey;
   public
-    constructor Create(KeyBuff_: TCipherKeyBuffer); override;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); override;
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
@@ -1923,13 +1925,13 @@ type
   private
     Fkey: TTwofishKey;
   public
-    constructor Create(KeyBuff_: TCipherKeyBuffer); override;
+    constructor Create(KeyBuffer_: TCipherKeyBuffer); override;
     procedure Encrypt(sour: Pointer; Size: NativeInt); override;
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
 
-function CreateCipherClass(cs: TCipherSecurity; KeyBuff_: TCipherKeyBuffer): TCipher_Base; overload;
-function CreateCipherClass(cs: TCipherSecurity; KeyBuff_: TPascalString): TCipher_Base; overload;
+function CreateCipherClass(cs: TCipherSecurity; KeyBuffer_: TCipherKeyBuffer): TCipher_Base; overload;
+function CreateCipherClass(cs: TCipherSecurity; KeyBuffer_: TPascalString): TCipher_Base; overload;
 
 implementation
 
@@ -10405,9 +10407,12 @@ begin
   PDWORD(@Data[12])^ := R1 xor KeyContext.ExpandedKey[3];
 end;
 
-constructor TCipher_Base.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_Base.Create(KeyBuffer_: TCipherKeyBuffer);
 begin
   inherited Create;
+  SetLength(FKeyBuffer, length(KeyBuffer_));
+  CopyPtr(@KeyBuffer_[0], @FKeyBuffer[0], length(KeyBuffer_));
+
   FLevel := 1;
   FProcessTail := True;
   FCBC := False;
@@ -10415,6 +10420,7 @@ end;
 
 destructor TCipher_Base.Destroy;
 begin
+  SetLength(FKeyBuffer, 0);
   inherited Destroy;
 end;
 
@@ -10466,12 +10472,12 @@ begin
   DisposeObject(m64);
 end;
 
-constructor TCipher_DES64.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_DES64.Create(KeyBuffer_: TCipherKeyBuffer);
 var
   k: TKey64;
 begin
-  inherited Create(KeyBuff_);
-  TCipher.GetKey(@KeyBuff_, k);
+  inherited Create(KeyBuffer_);
+  TCipher.GetKey(@KeyBuffer_, k);
   TDES.InitEncryptDES(k, FEkey, True);
   TDES.InitEncryptDES(k, FDKey, False);
 end;
@@ -10520,12 +10526,12 @@ begin
       TCipher.EncryptTail(GetOffset(sour, p), Size - p);
 end;
 
-constructor TCipher_DES128.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_DES128.Create(KeyBuffer_: TCipherKeyBuffer);
 var
   k: TKey128;
 begin
-  inherited Create(KeyBuff_);
-  TCipher.GetKey(@KeyBuff_, k);
+  inherited Create(KeyBuffer_);
+  TCipher.GetKey(@KeyBuffer_, k);
   TDES.InitEncryptTripleDES(k, FEkey, True);
   TDES.InitEncryptTripleDES(k, FDKey, False);
 end;
@@ -10574,12 +10580,12 @@ begin
       TCipher.EncryptTail(GetOffset(sour, p), Size - p);
 end;
 
-constructor TCipher_DES192.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_DES192.Create(KeyBuffer_: TCipherKeyBuffer);
 var
   k1, k2, k3: TKey64;
 begin
-  inherited Create(KeyBuff_);
-  TCipher.GetKey(@KeyBuff_, k1, k2, k3);
+  inherited Create(KeyBuffer_);
+  TCipher.GetKey(@KeyBuffer_, k1, k2, k3);
   TDES.InitEncryptTripleDES3Key(k1, k2, k3, FEkey, True);
   TDES.InitEncryptTripleDES3Key(k1, k2, k3, FDKey, False);
 end;
@@ -10628,12 +10634,12 @@ begin
       TCipher.EncryptTail(GetOffset(sour, p), Size - p);
 end;
 
-constructor TCipher_BlowFish.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_BlowFish.Create(KeyBuffer_: TCipherKeyBuffer);
 var
   k: TKey128;
 begin
-  inherited Create(KeyBuff_);
-  TCipher.GetKey(@KeyBuff_, k);
+  inherited Create(KeyBuffer_);
+  TCipher.GetKey(@KeyBuffer_, k);
   TBlowfish.InitEncryptBF(k, Fkey);
 end;
 
@@ -10681,12 +10687,12 @@ begin
       TCipher.EncryptTail(GetOffset(sour, p), Size - p);
 end;
 
-constructor TCipher_LBC.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_LBC.Create(KeyBuffer_: TCipherKeyBuffer);
 var
   k: TKey128;
 begin
-  inherited Create(KeyBuff_);
-  TCipher.GetKey(@KeyBuff_, k);
+  inherited Create(KeyBuffer_);
+  TCipher.GetKey(@KeyBuffer_, k);
   TLBC.InitEncryptLBC(k, FEkey, 16, True);
   TLBC.InitEncryptLBC(k, FDKey, 16, False);
 end;
@@ -10735,10 +10741,10 @@ begin
       TCipher.EncryptTail(GetOffset(sour, p), Size - p);
 end;
 
-constructor TCipher_LQC.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_LQC.Create(KeyBuffer_: TCipherKeyBuffer);
 begin
-  inherited Create(KeyBuff_);
-  TCipher.GetKey(@KeyBuff_, Fkey);
+  inherited Create(KeyBuffer_);
+  TCipher.GetKey(@KeyBuffer_, Fkey);
 end;
 
 procedure TCipher_LQC.Encrypt(sour: Pointer; Size: NativeInt);
@@ -10785,12 +10791,12 @@ begin
       TCipher.EncryptTail(GetOffset(sour, p), Size - p);
 end;
 
-constructor TCipher_RNG32.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_RNG32.Create(KeyBuffer_: TCipherKeyBuffer);
 var
   k: DWORD;
 begin
-  inherited Create(KeyBuff_);
-  TCipher.GetKey(@KeyBuff_, k);
+  inherited Create(KeyBuffer_);
+  TCipher.GetKey(@KeyBuffer_, k);
   TRNG.InitEncryptRNG32(k, Fkey);
 end;
 
@@ -10814,12 +10820,12 @@ begin
   TRNG.EncryptRNG32(tmp, sour^, Size);
 end;
 
-constructor TCipher_RNG64.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_RNG64.Create(KeyBuffer_: TCipherKeyBuffer);
 var
   k1, k2: DWORD;
 begin
-  inherited Create(KeyBuff_);
-  TCipher.GetKey(@KeyBuff_, k1, k2);
+  inherited Create(KeyBuffer_);
+  TCipher.GetKey(@KeyBuffer_, k1, k2);
   TRNG.InitEncryptRNG64(k1, k2, Fkey);
 end;
 
@@ -10843,13 +10849,13 @@ begin
   TRNG.EncryptRNG64(tmp, sour^, Size);
 end;
 
-constructor TCipher_LSC.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_LSC.Create(KeyBuffer_: TCipherKeyBuffer);
 var
   k: TBytes;
   k255: TBytes;
 begin
-  inherited Create(KeyBuff_);
-  TCipher.GetKey(@KeyBuff_, k);
+  inherited Create(KeyBuffer_);
+  TCipher.GetKey(@KeyBuffer_, k);
 
   if length(k) > 255 then
     begin
@@ -10882,10 +10888,10 @@ begin
   TLSC.EncryptLSC(tmp, sour^, Size);
 end;
 
-constructor TCipher_XXTea512.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_XXTea512.Create(KeyBuffer_: TCipherKeyBuffer);
 begin
-  inherited Create(KeyBuff_);
-  TCipher.GetKey(@KeyBuff_, Fkey);
+  inherited Create(KeyBuffer_);
+  TCipher.GetKey(@KeyBuffer_, Fkey);
 end;
 
 procedure TCipher_XXTea512.Encrypt(sour: Pointer; Size: NativeInt);
@@ -10932,12 +10938,12 @@ begin
       TCipher.EncryptTail(GetOffset(sour, p), Size - p);
 end;
 
-constructor TCipher_RC6.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_RC6.Create(KeyBuffer_: TCipherKeyBuffer);
 var
   k, k256: TBytes;
 begin
-  inherited Create(KeyBuff_);
-  TCipher.GetKey(@KeyBuff_, k);
+  inherited Create(KeyBuffer_);
+  TCipher.GetKey(@KeyBuffer_, k);
 
   SetLength(k256, 32);
   THashMD.GenerateLMDKey((@k256[0])^, 32, k);
@@ -10989,12 +10995,12 @@ begin
       TCipher.EncryptTail(GetOffset(sour, p), Size - p);
 end;
 
-constructor TCipher_Serpent.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_Serpent.Create(KeyBuffer_: TCipherKeyBuffer);
 var
   k, k256: TBytes;
 begin
-  inherited Create(KeyBuff_);
-  TCipher.GetKey(@KeyBuff_, k);
+  inherited Create(KeyBuffer_);
+  TCipher.GetKey(@KeyBuffer_, k);
 
   SetLength(k256, 32);
   THashMD.GenerateLMDKey((@k256[0])^, 32, k);
@@ -11046,12 +11052,12 @@ begin
       TCipher.EncryptTail(GetOffset(sour, p), Size - p);
 end;
 
-constructor TCipher_Mars.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_Mars.Create(KeyBuffer_: TCipherKeyBuffer);
 var
   k, k256: TBytes;
 begin
-  inherited Create(KeyBuff_);
-  TCipher.GetKey(@KeyBuff_, k);
+  inherited Create(KeyBuffer_);
+  TCipher.GetKey(@KeyBuffer_, k);
 
   SetLength(k256, 32);
   THashMD.GenerateLMDKey((@k256[0])^, 32, k);
@@ -11103,12 +11109,12 @@ begin
       TCipher.EncryptTail(GetOffset(sour, p), Size - p);
 end;
 
-constructor TCipher_Rijndael.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_Rijndael.Create(KeyBuffer_: TCipherKeyBuffer);
 var
   k, k256: TBytes;
 begin
-  inherited Create(KeyBuff_);
-  TCipher.GetKey(@KeyBuff_, k);
+  inherited Create(KeyBuffer_);
+  TCipher.GetKey(@KeyBuffer_, k);
 
   SetLength(k256, 32);
   THashMD.GenerateLMDKey((@k256[0])^, 32, k);
@@ -11160,12 +11166,12 @@ begin
       TCipher.EncryptTail(GetOffset(sour, p), Size - p);
 end;
 
-constructor TCipher_TwoFish.Create(KeyBuff_: TCipherKeyBuffer);
+constructor TCipher_TwoFish.Create(KeyBuffer_: TCipherKeyBuffer);
 var
   k, k256: TBytes;
 begin
-  inherited Create(KeyBuff_);
-  TCipher.GetKey(@KeyBuff_, k);
+  inherited Create(KeyBuffer_);
+  TCipher.GetKey(@KeyBuffer_, k);
 
   SetLength(k256, 32);
   THashMD.GenerateLMDKey((@k256[0])^, 32, k);
@@ -11217,34 +11223,34 @@ begin
       TCipher.EncryptTail(GetOffset(sour, p), Size - p);
 end;
 
-function CreateCipherClass(cs: TCipherSecurity; KeyBuff_: TCipherKeyBuffer): TCipher_Base;
+function CreateCipherClass(cs: TCipherSecurity; KeyBuffer_: TCipherKeyBuffer): TCipher_Base;
 begin
   case cs of
-    csNone: Result := TCipher_Base.Create(KeyBuff_);
-    csDES64: Result := TCipher_DES64.Create(KeyBuff_);
-    csDES128: Result := TCipher_DES128.Create(KeyBuff_);
-    csDES192: Result := TCipher_DES192.Create(KeyBuff_);
-    csBlowfish: Result := TCipher_BlowFish.Create(KeyBuff_);
-    csLBC: Result := TCipher_LBC.Create(KeyBuff_);
-    csLQC: Result := TCipher_LQC.Create(KeyBuff_);
-    csRNG32: Result := TCipher_RNG32.Create(KeyBuff_);
-    csRNG64: Result := TCipher_RNG64.Create(KeyBuff_);
-    csLSC: Result := TCipher_LSC.Create(KeyBuff_);
-    csTwoFish: Result := TCipher_TwoFish.Create(KeyBuff_);
-    csXXTea512: Result := TCipher_XXTea512.Create(KeyBuff_);
-    csRC6: Result := TCipher_RC6.Create(KeyBuff_);
-    csSerpent: Result := TCipher_Serpent.Create(KeyBuff_);
-    csMars: Result := TCipher_Mars.Create(KeyBuff_);
-    csRijndael: Result := TCipher_Rijndael.Create(KeyBuff_);
-    else Result := TCipher_Base.Create(KeyBuff_);
+    csNone: Result := TCipher_Base.Create(KeyBuffer_);
+    csDES64: Result := TCipher_DES64.Create(KeyBuffer_);
+    csDES128: Result := TCipher_DES128.Create(KeyBuffer_);
+    csDES192: Result := TCipher_DES192.Create(KeyBuffer_);
+    csBlowfish: Result := TCipher_BlowFish.Create(KeyBuffer_);
+    csLBC: Result := TCipher_LBC.Create(KeyBuffer_);
+    csLQC: Result := TCipher_LQC.Create(KeyBuffer_);
+    csRNG32: Result := TCipher_RNG32.Create(KeyBuffer_);
+    csRNG64: Result := TCipher_RNG64.Create(KeyBuffer_);
+    csLSC: Result := TCipher_LSC.Create(KeyBuffer_);
+    csTwoFish: Result := TCipher_TwoFish.Create(KeyBuffer_);
+    csXXTea512: Result := TCipher_XXTea512.Create(KeyBuffer_);
+    csRC6: Result := TCipher_RC6.Create(KeyBuffer_);
+    csSerpent: Result := TCipher_Serpent.Create(KeyBuffer_);
+    csMars: Result := TCipher_Mars.Create(KeyBuffer_);
+    csRijndael: Result := TCipher_Rijndael.Create(KeyBuffer_);
+    else Result := TCipher_Base.Create(KeyBuffer_);
   end;
 end;
 
-function CreateCipherClass(cs: TCipherSecurity; KeyBuff_: TPascalString): TCipher_Base;
+function CreateCipherClass(cs: TCipherSecurity; KeyBuffer_: TPascalString): TCipher_Base;
 var
   k: TCipherKeyBuffer;
 begin
-  TCipher.GenerateKey(cs, KeyBuff_, k);
+  TCipher.GenerateKey(cs, KeyBuffer_, k);
   Result := CreateCipherClass(cs, k);
 end;
 
