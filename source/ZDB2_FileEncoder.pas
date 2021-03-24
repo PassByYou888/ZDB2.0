@@ -110,6 +110,7 @@ type
     FIOThread: TIO_Thread;
     FDecoderFiles: TZDB2_FIL;
     FMaxQueue: Integer;
+    FFileLog: TPascalStringList;
     FProgressInfo: SystemString;
     FOnProgress: TZDB2_File_OnProgress;
     FAborted: Boolean;
@@ -128,6 +129,7 @@ type
     function DecodeToDirectory(source_: TZDB2_FI; DestDirectory_: U_String): Boolean;
     property Files: TZDB2_FIL read FDecoderFiles;
     property MaxQueue: Integer read FMaxQueue write FMaxQueue;
+    property FileLog: TPascalStringList read FFileLog;
     property OnProgress: TZDB2_File_OnProgress read FOnProgress write FOnProgress;
     property Aborted: Boolean read FAborted write FAborted;
     property Core: TZDB2_Core_Space read FCore;
@@ -633,6 +635,7 @@ begin
     end;
   DisposeObject(mem);
 
+  FFileLog := TPascalStringList.Create;
   FProgressInfo := '';
   FOnProgress := nil;
   FAborted := False;
@@ -791,6 +794,7 @@ begin
       umlSetFileTime(fn, source_.FimeTime);
       DoStatus('decode %s %s -> %s ratio:%d%%',
         [FProgressInfo, umlSizeToStr(source_.Compressed).Text, umlSizeToStr(source_.Size).Text, 100 - umlPercentageToInt64(source_.Size, source_.Compressed)]);
+      FFileLog.Add(fn);
     end;
   except
     DoStatus('illegal file %s', [fn.Text]);
