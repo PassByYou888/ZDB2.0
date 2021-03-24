@@ -155,10 +155,14 @@ type
     function GetState: PZDB2_Core_SpaceState;
     property State: PZDB2_Core_SpaceState read GetState;
 
-    procedure NewStream(Stream: TCoreClassStream; Space_: Int64; BlockSize_: Word; Mode: TZDB2_SpaceMode);
-    procedure OpenStream(Stream: TCoreClassStream; OnlyRead: Boolean; Mode: TZDB2_SpaceMode);
-    procedure NewFile(Filename: U_String; Space_: Int64; BlockSize_: Word; Mode: TZDB2_SpaceMode);
-    procedure OpenFile(Filename: U_String; OnlyRead: Boolean; Mode: TZDB2_SpaceMode);
+    procedure NewStream(Cipher_: IZDB2_Cipher; Stream: TCoreClassStream; Space_: Int64; BlockSize_: Word; Mode: TZDB2_SpaceMode); overload;
+    procedure NewStream(Stream: TCoreClassStream; Space_: Int64; BlockSize_: Word; Mode: TZDB2_SpaceMode); overload;
+    procedure OpenStream(Cipher_: IZDB2_Cipher; Stream: TCoreClassStream; OnlyRead: Boolean; Mode: TZDB2_SpaceMode); overload;
+    procedure OpenStream(Stream: TCoreClassStream; OnlyRead: Boolean; Mode: TZDB2_SpaceMode); overload;
+    procedure NewFile(Cipher_: IZDB2_Cipher; Filename: U_String; Space_: Int64; BlockSize_: Word; Mode: TZDB2_SpaceMode); overload;
+    procedure NewFile(Filename: U_String; Space_: Int64; BlockSize_: Word; Mode: TZDB2_SpaceMode); overload;
+    procedure OpenFile(Cipher_: IZDB2_Cipher; Filename: U_String; OnlyRead: Boolean; Mode: TZDB2_SpaceMode); overload;
+    procedure OpenFile(Filename: U_String; OnlyRead: Boolean; Mode: TZDB2_SpaceMode); overload;
 
     { save/flush,thread supported }
     procedure Save(Wait_: Boolean);
@@ -810,7 +814,7 @@ begin
       Result := nil;
 end;
 
-procedure TZDB2.NewStream(Stream: TCoreClassStream; Space_: Int64; BlockSize_: Word; Mode: TZDB2_SpaceMode);
+procedure TZDB2.NewStream(Cipher_: IZDB2_Cipher; Stream: TCoreClassStream; Space_: Int64; BlockSize_: Word; Mode: TZDB2_SpaceMode);
 var
   P_IO: PIOHnd;
 begin
@@ -818,6 +822,7 @@ begin
   InitIOHnd(P_IO^);
   umlFileCreateAsStream(Stream, P_IO^);
   FSpace := TZDB2_Core_Space.Create(P_IO);
+  FSpace.Cipher := Cipher_;
   FSpace.OnProgress := FOnCoreProgress;
   FSpace.OnNoSpace := {$IFDEF FPC}@{$ENDIF FPC}DoOnNoSpace;
   FSpace.AutoCloseIOHnd := True;
@@ -834,7 +839,12 @@ begin
   Save(True);
 end;
 
-procedure TZDB2.OpenStream(Stream: TCoreClassStream; OnlyRead: Boolean; Mode: TZDB2_SpaceMode);
+procedure TZDB2.NewStream(Stream: TCoreClassStream; Space_: Int64; BlockSize_: Word; Mode: TZDB2_SpaceMode);
+begin
+  NewStream(nil, Stream, Space_, BlockSize_, Mode);
+end;
+
+procedure TZDB2.OpenStream(Cipher_: IZDB2_Cipher; Stream: TCoreClassStream; OnlyRead: Boolean; Mode: TZDB2_SpaceMode);
 var
   P_IO: PIOHnd;
 begin
@@ -842,6 +852,7 @@ begin
   InitIOHnd(P_IO^);
   umlFileCreateAsStream(Stream, P_IO^, OnlyRead);
   FSpace := TZDB2_Core_Space.Create(P_IO);
+  FSpace.Cipher := Cipher_;
   FSpace.OnProgress := FOnCoreProgress;
   FSpace.OnNoSpace := {$IFDEF FPC}@{$ENDIF FPC}DoOnNoSpace;
   FSpace.AutoCloseIOHnd := True;
@@ -858,7 +869,12 @@ begin
   TCompute.RunM(nil, nil, {$IFDEF FPC}@{$ENDIF FPC}ThRun);
 end;
 
-procedure TZDB2.NewFile(Filename: U_String; Space_: Int64; BlockSize_: Word; Mode: TZDB2_SpaceMode);
+procedure TZDB2.OpenStream(Stream: TCoreClassStream; OnlyRead: Boolean; Mode: TZDB2_SpaceMode);
+begin
+  OpenStream(nil, Stream, OnlyRead, Mode);
+end;
+
+procedure TZDB2.NewFile(Cipher_: IZDB2_Cipher; Filename: U_String; Space_: Int64; BlockSize_: Word; Mode: TZDB2_SpaceMode);
 var
   P_IO: PIOHnd;
 begin
@@ -866,6 +882,7 @@ begin
   InitIOHnd(P_IO^);
   umlFileCreate(Filename, P_IO^);
   FSpace := TZDB2_Core_Space.Create(P_IO);
+  FSpace.Cipher := Cipher_;
   FSpace.OnProgress := FOnCoreProgress;
   FSpace.OnNoSpace := {$IFDEF FPC}@{$ENDIF FPC}DoOnNoSpace;
   FSpace.AutoCloseIOHnd := True;
@@ -882,7 +899,12 @@ begin
   Save(True);
 end;
 
-procedure TZDB2.OpenFile(Filename: U_String; OnlyRead: Boolean; Mode: TZDB2_SpaceMode);
+procedure TZDB2.NewFile(Filename: U_String; Space_: Int64; BlockSize_: Word; Mode: TZDB2_SpaceMode);
+begin
+  NewFile(nil, Filename, Space_, BlockSize_, Mode);
+end;
+
+procedure TZDB2.OpenFile(Cipher_: IZDB2_Cipher; Filename: U_String; OnlyRead: Boolean; Mode: TZDB2_SpaceMode);
 var
   P_IO: PIOHnd;
 begin
@@ -890,6 +912,7 @@ begin
   InitIOHnd(P_IO^);
   umlFileOpen(Filename, P_IO^, OnlyRead);
   FSpace := TZDB2_Core_Space.Create(P_IO);
+  FSpace.Cipher := Cipher_;
   FSpace.OnProgress := FOnCoreProgress;
   FSpace.OnNoSpace := {$IFDEF FPC}@{$ENDIF FPC}DoOnNoSpace;
   FSpace.AutoCloseIOHnd := True;
@@ -904,6 +927,11 @@ begin
   FActivted.V := True;
   FRunning.V := True;
   TCompute.RunM(nil, nil, {$IFDEF FPC}@{$ENDIF FPC}ThRun);
+end;
+
+procedure TZDB2.OpenFile(Filename: U_String; OnlyRead: Boolean; Mode: TZDB2_SpaceMode);
+begin
+  OpenFile(nil, Filename, OnlyRead, Mode);
 end;
 
 procedure TZDB2.Save(Wait_: Boolean);
@@ -1374,6 +1402,7 @@ begin
     begin
       tmp := TZDB2_Mem.Create;
       tmp.Size := umlRandomRange($40, 512);
+      MT19937Rand32(MaxInt, tmp.Memory, tmp.Size div 4);
       db2.Post(tmp, True);
     end;
   db2.WaitQueue;
@@ -1403,6 +1432,8 @@ begin
 end;
 
 initialization
+
+// TZDB2.Test;
 
 finalization
 
