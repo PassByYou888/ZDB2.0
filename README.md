@@ -36,11 +36,11 @@
 
 **内核级支持了5大美国国家标准技术研究所(NIST)高级加密标准算法**
 
-- rc6加密，通讯协议支持 https://en.wikipedia.org/wiki/RC6
-- Twofish加密，通讯协议支持 https://en.wikipedia.org/wiki/Twofish
-- Serpent加密，通讯协议支持 https://en.wikipedia.org/wiki/Serpent_(cipher)
-- Mars加密，通讯协议支持 https://en.wikipedia.org/wiki/MARS_(cipher)
-- Rijndael加密，通讯协议支持 https://en.wikipedia.org/wiki/Advanced_Encryption_Standard
+- rc6加密，https://en.wikipedia.org/wiki/RC6
+- Twofish加密，https://en.wikipedia.org/wiki/Twofish
+- Serpent加密，https://en.wikipedia.org/wiki/Serpent_(cipher)
+- Mars加密，https://en.wikipedia.org/wiki/MARS_(cipher)
+- Rijndael加密，https://en.wikipedia.org/wiki/Advanced_Encryption_Standard
 
 ## 问题说明
 
