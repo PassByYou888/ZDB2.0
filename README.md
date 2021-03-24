@@ -30,6 +30,17 @@
 - 支持滚动写入，例如我们预定的分配空间是500G，空间写满以后，会自动滚回去写入
 - 支持自动化扩容，例如我们预定的分配空间是500G，空间写满以后，会自动化进行扩容动作
 
+## ZDB2.0支持数据安全
+
+**ZDB2.0数据存储安全/性能问题妥妥解决**
+
+**内核级支持了5大美国国家标准技术研究所(NIST)高级加密标准算法**
+
+- rc6加密，通讯协议支持 https://en.wikipedia.org/wiki/RC6
+- Twofish加密，通讯协议支持 https://en.wikipedia.org/wiki/Twofish
+- Serpent加密，通讯协议支持 https://en.wikipedia.org/wiki/Serpent_(cipher)
+- Mars加密，通讯协议支持 https://en.wikipedia.org/wiki/MARS_(cipher)
+- Rijndael加密，通讯协议支持 https://en.wikipedia.org/wiki/Advanced_Encryption_Standard
 
 ## 问题说明
 
@@ -37,6 +48,7 @@
 - ZDB2.0只是一个存储空间内核，网络存储，文件系统，这些都是在它基础上推出来的东西
 - 如果我们需要具体的功能，自己动手去实现它即可
 - **ZDB2.0每个支持内核的子库均有完成的测试api，长期支持和维护的项目，不是写完不管**
+- ZDB2.0的加解密模型与ZServer4D是有差异的，主要在于性能问题上，ZS采用一次性秘钥，ZDB2绕过了秘钥反复生成，ZDB2加解密的性能模型优于ZS，支持流畅IO吞吐
 
 
 by.qq600585

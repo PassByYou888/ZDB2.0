@@ -69,7 +69,7 @@ type
 
   TZDB2_File_Encoder = class
   private
-    FZDB2: TZDB2_Core_Space;
+    FCore: TZDB2_Core_Space;
     FPlace: TZDB2_SpacePlan;
     FIOThread: TIO_Thread;
     FEncoderFiles: TZDB2_FIL;
@@ -78,16 +78,19 @@ type
     FOnProgress: TZDB2_File_OnProgress;
     FAborted: Boolean;
   public
-    constructor Create(ZDB2_Stream: TCoreClassStream; ThNum_: Integer);
-    constructor CreateFile(ZDB2_FileName: U_String; ThNum_: Integer);
+    constructor Create(Cipher_: IZDB2_Cipher; ZDB2_Stream: TCoreClassStream; ThNum_: Integer); overload;
+    constructor CreateFile(Cipher_: IZDB2_Cipher; ZDB2_FileName: U_String; ThNum_: Integer); overload;
+    constructor Create(ZDB2_Stream: TCoreClassStream; ThNum_: Integer); overload;
+    constructor CreateFile(ZDB2_FileName: U_String; ThNum_: Integer); overload;
     destructor Destroy; override;
     function EncodeFromStream(stream: TCoreClassStream; chunkSize_: Int64; CM: TSelectCompressionMethod; BlockSize_: Word): TZDB2_FI;
     function EncodeFromFile(FileName, OwnerPath: U_String; chunkSize_: Int64; CM: TSelectCompressionMethod; BlockSize_: Word): TZDB2_FI;
     procedure EncodeFromDirectory(Directory_: U_String; IncludeSub: Boolean; OwnerPath_: U_String; chunkSize_: Int64; CM: TSelectCompressionMethod; BlockSize_: Word);
-    procedure Flush;
+    function Flush: Int64;
     property MaxQueue: Integer read FMaxQueue write FMaxQueue;
     property OnProgress: TZDB2_File_OnProgress read FOnProgress write FOnProgress;
     property Aborted: Boolean read FAborted write FAborted;
+    property Core: TZDB2_Core_Space read FCore;
 
     class procedure Test;
   end;
@@ -103,7 +106,7 @@ type
 
   TZDB2_File_Decoder = class
   private
-    FZDB2: TZDB2_Core_Space;
+    FCore: TZDB2_Core_Space;
     FIOThread: TIO_Thread;
     FDecoderFiles: TZDB2_FIL;
     FMaxQueue: Integer;
@@ -111,10 +114,14 @@ type
     FOnProgress: TZDB2_File_OnProgress;
     FAborted: Boolean;
   public
-    class function Check(ZDB2_Stream: TCoreClassStream): Boolean;
-    class function CheckFile(ZDB2_FileName: U_String): Boolean;
-    constructor Create(ZDB2_Stream: TCoreClassStream; ThNum_: Integer);
-    constructor CreateFile(ZDB2_FileName: U_String; ThNum_: Integer);
+    class function Check(Cipher_: IZDB2_Cipher; ZDB2_Stream: TCoreClassStream): Boolean; overload;
+    class function CheckFile(Cipher_: IZDB2_Cipher; ZDB2_FileName: U_String): Boolean; overload;
+    class function Check(ZDB2_Stream: TCoreClassStream): Boolean; overload;
+    class function CheckFile(ZDB2_FileName: U_String): Boolean; overload;
+    constructor Create(Cipher_: IZDB2_Cipher; ZDB2_Stream: TCoreClassStream; ThNum_: Integer); overload;
+    constructor CreateFile(Cipher_: IZDB2_Cipher; ZDB2_FileName: U_String; ThNum_: Integer); overload;
+    constructor Create(ZDB2_Stream: TCoreClassStream; ThNum_: Integer); overload;
+    constructor CreateFile(ZDB2_FileName: U_String; ThNum_: Integer); overload;
     destructor Destroy; override;
     function CheckFileInfo(FileInfo_: TZDB2_FI): Boolean;
     function DecodeToStream(source_: TZDB2_FI; Dest_: TCoreClassStream): Boolean;
@@ -123,6 +130,7 @@ type
     property MaxQueue: Integer read FMaxQueue write FMaxQueue;
     property OnProgress: TZDB2_File_OnProgress read FOnProgress write FOnProgress;
     property Aborted: Boolean read FAborted write FAborted;
+    property Core: TZDB2_Core_Space read FCore;
 
     class procedure Test;
   end;
@@ -220,7 +228,7 @@ begin
   SelectCompressStream(CM, Source, Dest);
 end;
 
-constructor TZDB2_File_Encoder.Create(ZDB2_Stream: TCoreClassStream; ThNum_: Integer);
+constructor TZDB2_File_Encoder.Create(Cipher_: IZDB2_Cipher; ZDB2_Stream: TCoreClassStream; ThNum_: Integer);
 var
   P: PIOHnd;
 begin
@@ -229,10 +237,11 @@ begin
   InitIOHnd(P^);
   if not umlFileCreateAsStream(ZDB2_Stream, P^) then
       RaiseInfo('create stream error.');
-  FZDB2 := TZDB2_Core_Space.Create(P);
-  FZDB2.AutoCloseIOHnd := True;
-  FZDB2.AutoFreeIOHnd := True;
-  FPlace := TZDB2_SpacePlan.Create(FZDB2);
+  FCore := TZDB2_Core_Space.Create(P);
+  FCore.Cipher := Cipher_;
+  FCore.AutoCloseIOHnd := True;
+  FCore.AutoFreeIOHnd := True;
+  FPlace := TZDB2_SpacePlan.Create(FCore);
 
   FIOThread := TIO_Thread.Create(ThNum_);
   FEncoderFiles := TZDB2_FIL.Create;
@@ -242,13 +251,23 @@ begin
   FAborted := False;
 end;
 
-constructor TZDB2_File_Encoder.CreateFile(ZDB2_FileName: U_String; ThNum_: Integer);
+constructor TZDB2_File_Encoder.CreateFile(Cipher_: IZDB2_Cipher; ZDB2_FileName: U_String; ThNum_: Integer);
 var
   fs: TCoreClassFileStream;
 begin
   fs := TCoreClassFileStream.Create(ZDB2_FileName, fmCreate);
-  Create(fs, ThNum_);
-  FZDB2.Space_IOHnd^.AutoFree := True;
+  Create(Cipher_, fs, ThNum_);
+  FCore.Space_IOHnd^.AutoFree := True;
+end;
+
+constructor TZDB2_File_Encoder.Create(ZDB2_Stream: TCoreClassStream; ThNum_: Integer);
+begin
+  Create(nil, ZDB2_Stream, ThNum_);
+end;
+
+constructor TZDB2_File_Encoder.CreateFile(ZDB2_FileName: U_String; ThNum_: Integer);
+begin
+  CreateFile(nil, ZDB2_FileName, ThNum_);
 end;
 
 destructor TZDB2_File_Encoder.Destroy;
@@ -257,7 +276,7 @@ begin
   FEncoderFiles.Clean;
   DisposeObject(FEncoderFiles);
   DisposeObject(FPlace);
-  DisposeObject(FZDB2);
+  DisposeObject(FCore);
   inherited Destroy;
 end;
 
@@ -387,6 +406,7 @@ end;
 function TZDB2_File_Encoder.EncodeFromFile(FileName, OwnerPath: U_String; chunkSize_: Int64; CM: TSelectCompressionMethod; BlockSize_: Word): TZDB2_FI;
 var
   fs: TCoreClassFileStream;
+  prefix: SystemString;
 begin
   Result := nil;
   if not umlFileExists(FileName) then
@@ -397,8 +417,18 @@ begin
   Result.FileName := umlGetFileName(FileName);
   Result.OwnerPath := OwnerPath;
   Result.FimeTime := umlGetFileTime(FileName);
-  DoStatus('encode %s %s->%s ratio:%d%%',
-    [FProgressInfo,
+
+  if (FCore.Space_IOHnd^.Handle is TCoreClassFileStream) then
+      prefix := umlGetFileName(TCoreClassFileStream(FCore.Space_IOHnd^.Handle).FileName)
+  else if (FCore.Space_IOHnd^.Handle is TReliableFileStream) then
+      prefix := umlGetFileName(TReliableFileStream(FCore.Space_IOHnd^.Handle).FileName)
+  else
+      prefix := 'encode';
+
+  DoStatus('%s %s %s->%s ratio:%d%%',
+    [
+    prefix,
+    FProgressInfo,
     umlSizeToStr(Result.Size).Text,
     umlSizeToStr(Result.Compressed).Text,
     100 - umlPercentageToInt64(Result.Size, Result.Compressed)]);
@@ -427,30 +457,32 @@ begin
     end;
 end;
 
-procedure TZDB2_File_Encoder.Flush;
+function TZDB2_File_Encoder.Flush: Int64;
 var
   i: Integer;
   d: TDFE;
   m64: TMemoryStream64;
   FileInfo_ID: Integer;
 begin
+  Result := 0;
   d := TDFE.Create;
   for i := 0 to FEncoderFiles.Count - 1 do
     begin
       m64 := TMemoryStream64.Create;
       FEncoderFiles[i].SaveToStream(m64);
+      inc(Result, FEncoderFiles[i].Size);
       d.WriteStream(m64);
       DisposeObject(m64);
     end;
   m64 := TMemoryStream64.Create;
-  d.EncodeAsZLib(m64, True);
+  d.EncodeAsZLib(m64, False);
   if not FPlace.WriteStream(m64, 1024, FileInfo_ID) then
       RaiseInfo('flush error.');
   DisposeObject(m64);
   DisposeObject(d);
   FPlace.Flush;
-  PInteger(@FZDB2.UserCustomHeader^[$F0])^ := FileInfo_ID;
-  FZDB2.Save;
+  PInteger(@FCore.UserCustomHeader^[$F0])^ := FileInfo_ID;
+  FCore.Save;
   FEncoderFiles.Clean;
 end;
 
@@ -497,37 +529,67 @@ begin
   SelectDecompressStream(Source, Dest);
 end;
 
-class function TZDB2_File_Decoder.Check(ZDB2_Stream: TCoreClassStream): Boolean;
+class function TZDB2_File_Decoder.Check(Cipher_: IZDB2_Cipher; ZDB2_Stream: TCoreClassStream): Boolean;
 var
   ioHnd: TIOHnd;
   tmp: TZDB2_Core_Space;
   id: Integer;
+  mem: TZDB2_Mem;
+  d: TDFE;
 begin
   Result := False;
   InitIOHnd(ioHnd);
   if umlFileOpenAsStream('', ZDB2_Stream, ioHnd, True) then
     begin
       tmp := TZDB2_Core_Space.Create(@ioHnd);
-      Result := tmp.Open;
+      tmp.Cipher := Cipher_;
+      tmp.Open;
       id := PInteger(@tmp.UserCustomHeader^[$F0])^;
-      Result := Result and (id > 0) and tmp.Check(id);
+
+      if tmp.Check(id) then
+        begin
+          mem := TZDB2_Mem.Create.Create;
+          if tmp.ReadData(mem, id) then
+            begin
+              d := TDFE.Create;
+              try
+                d.LoadFromStream(mem.Stream64);
+                Result := d.Count >= 0;
+              except
+                  Result := False;
+              end;
+              DisposeObject(d);
+            end;
+          DisposeObject(mem);
+        end;
+
       DisposeObject(tmp);
     end;
 end;
 
-class function TZDB2_File_Decoder.CheckFile(ZDB2_FileName: U_String): Boolean;
+class function TZDB2_File_Decoder.CheckFile(Cipher_: IZDB2_Cipher; ZDB2_FileName: U_String): Boolean;
 var
   fs: TCoreClassFileStream;
 begin
   fs := TCoreClassFileStream.Create(ZDB2_FileName, fmOpenRead or fmShareDenyNone);
   try
-      Result := Check(fs);
+      Result := Check(Cipher_, fs);
   finally
       DisposeObject(fs);
   end;
 end;
 
-constructor TZDB2_File_Decoder.Create(ZDB2_Stream: TCoreClassStream; ThNum_: Integer);
+class function TZDB2_File_Decoder.Check(ZDB2_Stream: TCoreClassStream): Boolean;
+begin
+  Result := TZDB2_File_Decoder.Check(nil, ZDB2_Stream);
+end;
+
+class function TZDB2_File_Decoder.CheckFile(ZDB2_FileName: U_String): Boolean;
+begin
+  Result := TZDB2_File_Decoder.CheckFile(nil, ZDB2_FileName);
+end;
+
+constructor TZDB2_File_Decoder.Create(Cipher_: IZDB2_Cipher; ZDB2_Stream: TCoreClassStream; ThNum_: Integer);
 var
   P: PIOHnd;
   mem: TZDB2_Mem;
@@ -541,10 +603,11 @@ begin
   InitIOHnd(P^);
   if not umlFileOpenAsStream('', ZDB2_Stream, P^, True) then
       RaiseInfo('create stream error.');
-  FZDB2 := TZDB2_Core_Space.Create(P);
-  FZDB2.AutoCloseIOHnd := True;
-  FZDB2.AutoFreeIOHnd := True;
-  FZDB2.Open;
+  FCore := TZDB2_Core_Space.Create(P);
+  FCore.Cipher := Cipher_;
+  FCore.AutoCloseIOHnd := True;
+  FCore.AutoFreeIOHnd := True;
+  FCore.Open;
 
   FIOThread := TIO_Thread.Create(ThNum_);
   FMaxQueue := ThNum_ * 5;
@@ -552,7 +615,7 @@ begin
   FDecoderFiles := TZDB2_FIL.Create;
 
   mem := TZDB2_Mem.Create.Create;
-  if FZDB2.ReadData(mem, PInteger(@FZDB2.UserCustomHeader^[$F0])^) then
+  if FCore.ReadData(mem, PInteger(@FCore.UserCustomHeader^[$F0])^) then
     begin
       d := TDFE.Create;
       d.LoadFromStream(mem.Stream64);
@@ -575,13 +638,23 @@ begin
   FAborted := False;
 end;
 
-constructor TZDB2_File_Decoder.CreateFile(ZDB2_FileName: U_String; ThNum_: Integer);
+constructor TZDB2_File_Decoder.CreateFile(Cipher_: IZDB2_Cipher; ZDB2_FileName: U_String; ThNum_: Integer);
 var
   fs: TCoreClassFileStream;
 begin
   fs := TCoreClassFileStream.Create(ZDB2_FileName, fmOpenRead or fmShareDenyNone);
-  Create(fs, ThNum_);
-  FZDB2.Space_IOHnd^.AutoFree := True;
+  Create(Cipher_, fs, ThNum_);
+  FCore.Space_IOHnd^.AutoFree := True;
+end;
+
+constructor TZDB2_File_Decoder.Create(ZDB2_Stream: TCoreClassStream; ThNum_: Integer);
+begin
+  Create(nil, ZDB2_Stream, ThNum_);
+end;
+
+constructor TZDB2_File_Decoder.CreateFile(ZDB2_FileName: U_String; ThNum_: Integer);
+begin
+  CreateFile(nil, ZDB2_FileName, ThNum_);
 end;
 
 destructor TZDB2_File_Decoder.Destroy;
@@ -590,7 +663,7 @@ begin
   DisposeObject(FIOThread);
   FDecoderFiles.Clean;
   DisposeObject(FDecoderFiles);
-  DisposeObject(FZDB2);
+  DisposeObject(FCore);
   inherited Destroy;
 end;
 
@@ -600,7 +673,7 @@ var
 begin
   Result := True;
   for i := 0 to FileInfo_.HandleArray.Count - 1 do
-      Result := Result and FZDB2.Check(FileInfo_.HandleArray[i]);
+      Result := Result and FCore.Check(FileInfo_.HandleArray[i]);
 end;
 
 function TZDB2_File_Decoder.DecodeToStream(source_: TZDB2_FI; Dest_: TCoreClassStream): Boolean;
@@ -616,7 +689,7 @@ var
     for i := 0 to source_.HandleArray.Count - 1 do
       begin
         thIOData_ := TZDB2_FD_IO.Create;
-        FZDB2.ReadStream(thIOData_.Source, source_.HandleArray[i]);
+        FCore.ReadStream(thIOData_.Source, source_.HandleArray[i]);
         thIOData_.Source.Position := 0;
         FIOThread.EnQueue(thIOData_);
         while FIOThread.Count > FMaxQueue do
@@ -648,7 +721,7 @@ begin
       for i := 0 to source_.HandleArray.Count - 1 do
         begin
           thIOData_ := TZDB2_FD_IO.Create;
-          FZDB2.ReadStream(thIOData_.Source, source_.HandleArray[i]);
+          FCore.ReadStream(thIOData_.Source, source_.HandleArray[i]);
           thIOData_.Source.Position := 0;
           FIOThread.EnQueue(thIOData_);
           while FIOThread.Count > FMaxQueue do
