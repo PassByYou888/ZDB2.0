@@ -3036,7 +3036,7 @@ var
 begin
   buff := s.Bytes;
   SetLength(key, 128);
-  TCipher.GenerateMDHash(@buff[0], SizeOf(buff), @key[0], 128);
+  TCipher.GenerateMDHash(@buff[0], length(buff), @key[0], 128);
   GenerateKey(cs, @key[0], 128, output);
 end;
 
