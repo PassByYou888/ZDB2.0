@@ -586,8 +586,6 @@ function CompareQuantumCryptographyPassword(const passwd, passwdDataSource: TPas
 procedure QuantumEncrypt(input, output: TCoreClassStream; SecurityLevel: Integer; key: TCipherKeyBuffer);
 function QuantumDecrypt(input, output: TCoreClassStream; key: TCipherKeyBuffer): Boolean;
 
-procedure TestCoreCipher;
-
 {$REGION 'cryptAndHash'}
 
 
@@ -1778,12 +1776,14 @@ type
 type
   TCipher_Base = class(TCoreClassObject)
   protected
-    FKeyBuffer: TCipherKeyBuffer;
+    FCipherSecurity: TCipherSecurity;
+    FLastGenerateKey: TCipherKeyBuffer;
     FLevel: Integer;
     FProcessTail: Boolean;
     FCBC: Boolean;
   public
-    property KeyBuffer: TCipherKeyBuffer read FKeyBuffer;
+    property CipherSecurity: TCipherSecurity read FCipherSecurity;
+    property LastGenerateKey: TCipherKeyBuffer read FLastGenerateKey;
     property Level: Integer read FLevel write FLevel;
     property ProcessTail: Boolean read FProcessTail write FProcessTail;
     property CBC: Boolean read FCBC write FCBC;
@@ -1930,8 +1930,11 @@ type
     procedure Decrypt(sour: Pointer; Size: NativeInt); override;
   end;
 
-function CreateCipherClass(cs: TCipherSecurity; KeyBuffer_: TCipherKeyBuffer): TCipher_Base; overload;
-function CreateCipherClass(cs: TCipherSecurity; KeyBuffer_: TPascalString): TCipher_Base; overload;
+function CreateCipherClass(cs: TCipherSecurity; KeyBuffer_: TCipherKeyBuffer): TCipher_Base;
+function CreateCipherClassFromPassword(cs: TCipherSecurity; password_: TPascalString): TCipher_Base;
+// compatible SequEncryptCBC
+function CreateCipherClassFromBuffer(cs: TCipherSecurity; key: TCipherKeyBuffer): TCipher_Base;
+procedure TestCoreCipher;
 
 implementation
 
@@ -5074,285 +5077,6 @@ begin
   DisposeObject(m64);
 
   Result := True;
-end;
-
-procedure TestCoreCipher;
-var
-  Buffer: TBytes;
-  sour, Dest: TMemoryStream64;
-  k: TCipherKeyBuffer;
-  cs: TCipherSecurity;
-  sourHash: TSHA1Digest;
-  d: TTimeTick;
-
-  hs: THashSecurity;
-  hByte: TBytes;
-
-{$IFDEF Parallel}
-  Parallel: TParallelCipher;
-{$ENDIF}
-  ps: TListPascalString;
-  cBase: TCipher_Base;
-
-  s: TPascalString;
-begin
-  sour := TMemoryStream64.Create;
-  sour.Size := Int64(10 * 1024 * 1024 + 9);
-
-  FillPtrByte(sour.Memory, sour.Size, $7F);
-  DoStatus('stream mode md5 :' + umlStreamMD5String(sour).Text);
-  DoStatus('pointer mode md5:' + umlMD5String(sour.Memory, sour.Size).Text);
-
-  DisposeObject(sour);
-
-  DoStatus('Generate and verify QuantumCryptographyPassword test');
-  s := GenerateQuantumCryptographyPassword('123456');
-  if not CompareQuantumCryptographyPassword('123456', s) then
-      DoStatus('QuantumCryptographyPassword failed!');
-  if CompareQuantumCryptographyPassword('1234560', s) then
-      DoStatus('QuantumCryptographyPassword failed!');
-
-  DoStatus('Generate and verify password test');
-  DoStatus('verify short password');
-  s := GeneratePasswordHash(TCipher.CAllHash, '1');
-  if not ComparePasswordHash('1', s) then
-      DoStatus('PasswordHash failed!');
-  if ComparePasswordHash('11', s) then
-      DoStatus('PasswordHash failed!');
-
-  DoStatus('verify long password');
-  s := GeneratePasswordHash(TCipher.CAllHash, 'hello world 123456');
-  if not ComparePasswordHash('hello world 123456', s) then
-      DoStatus('PasswordHash failed!');
-  if ComparePasswordHash('111 hello world 123456', s) then
-      DoStatus('PasswordHash failed!');
-
-  DoStatus('verify full chiher style password');
-  s := GeneratePassword(TCipher.AllCipher, 'hello world');
-  if not ComparePassword(TCipher.AllCipher, 'hello world', s) then
-      DoStatus('Password cipher test failed! cipher: %s', ['']);
-  if ComparePassword(TCipher.AllCipher, 'hello_world', s) then
-      DoStatus('Password cipher test failed! cipher: %s', ['']);
-
-  for cs in TCipher.AllCipher do
-    begin
-      DoStatus('verify %s chiher style password', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-      s := GeneratePassword(TCipher.AllCipher, 'hello world');
-      if not ComparePassword(TCipher.AllCipher, 'hello world', s) then
-          DoStatus('Password cipher test failed! cipher: %s', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-      if ComparePassword(TCipher.AllCipher, 'hello_world', s) then
-          DoStatus('Password cipher test failed! cipher: %s', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-    end;
-
-  // hash and Sequence Encrypt
-  SetLength(Buffer, 128 * 1024);
-  FillPtrByte(@Buffer[0], length(Buffer), 99);
-
-  ps := TListPascalString.Create;
-
-  DoStatus('Generate Sequence Hash');
-  GenerateSequHash(TCipher.CAllHash, @Buffer[0], length(Buffer), ps);
-  // DoStatus(ps.Text);
-
-  if not CompareSequHash(ps, @Buffer[0], length(Buffer)) then
-      DoStatus('hash compare failed!');
-
-  DoStatus('test Sequence Encrypt');
-  k := TPascalString('hello world').Bytes;
-  if not SequEncryptWithDirect(TCipher.AllCipher, @Buffer[0], length(Buffer), k, True, True) then
-      DoStatus('SequEncrypt failed!');
-  if not SequEncryptWithDirect(TCipher.AllCipher, @Buffer[0], length(Buffer), k, False, True) then
-      DoStatus('SequEncrypt failed!');
-
-  DoStatus('verify Sequence Encrypt');
-  if not CompareSequHash(ps, @Buffer[0], length(Buffer)) then
-      DoStatus('hash compare failed!');
-
-  // cipher Encrypt performance
-  SetLength(Buffer, 1024 * 1024 * 1 + 99);
-  FillPtrByte(@Buffer[0], length(Buffer), $7F);
-
-  sour := TMemoryStream64.Create;
-  Dest := TMemoryStream64.Create;
-  sour.write(Buffer[0], high(Buffer));
-
-  Dest.Clear;
-  sour.Position := 0;
-  Dest.CopyFrom(sour, sour.Size);
-  sour.Position := 0;
-  Dest.Position := 0;
-
-  sourHash := TCipher.GenerateSHA1Hash(sour.Memory, sour.Size);
-
-{$IFDEF Parallel}
-  DoStatus(#13#10'Parallel cipher performance test');
-
-  for cs in TCipher.AllCipher do
-    begin
-      TCipher.GenerateKey(cs, 'hello world', k);
-      Parallel := TParallelCipher.Create;
-
-      Dest.Clear;
-      sour.Position := 0;
-      Dest.CopyFrom(sour, sour.Size);
-      sour.Position := 0;
-      Dest.Position := 0;
-
-      d := GetTimeTick;
-
-      if not Parallel.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, True, True) then
-          DoStatus('%s: Parallel encode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-      if not Parallel.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, False, True) then
-          DoStatus('%s: Parallel decode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-      DoStatus('%s - Parallel performance:%dms', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs)), GetTimeTick - d]);
-
-      if not TCipher.CompareHash(TCipher.GenerateSHA1Hash(Dest.Memory, Dest.Size), sourHash) then
-          DoStatus('%s Parallel hash error!', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-
-      DisposeObject(Parallel);
-    end;
-
-  for cs in TCipher.AllCipher do
-    begin
-      TCipher.GenerateKey(cs, 'hello world', k);
-      Parallel := TParallelCipher.Create;
-
-      Dest.Clear;
-      sour.Position := 0;
-      Dest.CopyFrom(sour, sour.Size);
-      sour.Position := 0;
-      Dest.Position := 0;
-
-      d := GetTimeTick;
-
-      if not TCipher.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, True, True) then
-          DoStatus('%s: normal 2 Parallel encode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-      if not Parallel.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, False, True) then
-          DoStatus('%s: normal 2 Parallel decode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-      DoStatus('%s - normal 2 Parallel performance:%dms', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs)), GetTimeTick - d]);
-
-      if not TCipher.CompareHash(TCipher.GenerateSHA1Hash(Dest.Memory, Dest.Size), sourHash) then
-          DoStatus('%s normal 2 Parallel hash error!', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-
-      DisposeObject(Parallel);
-    end;
-
-  for cs in TCipher.AllCipher do
-    begin
-      TCipher.GenerateKey(cs, 'hello world', k);
-      Parallel := TParallelCipher.Create;
-
-      Dest.Clear;
-      sour.Position := 0;
-      Dest.CopyFrom(sour, sour.Size);
-      sour.Position := 0;
-      Dest.Position := 0;
-
-      d := GetTimeTick;
-
-      if not Parallel.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, True, True) then
-          DoStatus('%s: Parallel 2 normal encode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-      if not TCipher.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, False, True) then
-          DoStatus('%s: Parallel 2 normal decode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-      DoStatus('%s - Parallel 2 normal performance:%dms', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs)), GetTimeTick - d]);
-
-      if not TCipher.CompareHash(TCipher.GenerateSHA1Hash(Dest.Memory, Dest.Size), sourHash) then
-          DoStatus('%s Parallel 2 normal hash error!', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-
-      DisposeObject(Parallel);
-    end;
-{$ENDIF}
-  DoStatus(#13#10'normal cipher performance test');
-
-  for cs in TCipher.AllCipher do
-    begin
-      TCipher.GenerateKey(cs, 'hello world', k);
-
-      Dest.Clear;
-      sour.Position := 0;
-      Dest.CopyFrom(sour, sour.Size);
-      sour.Position := 0;
-      Dest.Position := 0;
-
-      d := GetTimeTick;
-      if not TCipher.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, True, True) then
-          DoStatus('%s: encode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-      if not TCipher.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, False, True) then
-          DoStatus('%s: decode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-      DoStatus('%s - normal performance:%dms', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs)), GetTimeTick - d]);
-      if not TCipher.CompareHash(TCipher.GenerateSHA1Hash(Dest.Memory, Dest.Size), sourHash) then
-          DoStatus('%s hash error!', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-    end;
-
-  // cipher class test
-  for cs in TCipher.AllCipher do
-    begin
-      TCipher.GenerateKey(cs, 'hello world', k);
-
-      Dest.Clear;
-      sour.Position := 0;
-      Dest.CopyFrom(sour, sour.Size);
-      sour.Position := 0;
-      Dest.Position := 0;
-
-      d := GetTimeTick;
-      if not TCipher.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, True, True) then
-          DoStatus('%s: encode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-
-      cBase := CreateCipherClass(cs, k);
-      cBase.FProcessTail := True;
-      cBase.FCBC := True;
-      cBase.Decrypt(Dest.Memory, Dest.Size);
-
-      DoStatus('%s - normal performance:%dms', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs)), GetTimeTick - d]);
-      if not TCipher.CompareHash(TCipher.GenerateSHA1Hash(Dest.Memory, Dest.Size), sourHash) then
-          DoStatus('%s decrypt for %s hash error!', [cBase.ClassName, GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-      DisposeObject(cBase);
-    end;
-
-  for cs in TCipher.AllCipher do
-    begin
-      TCipher.GenerateKey(cs, 'hello world', k);
-
-      Dest.Clear;
-      sour.Position := 0;
-      Dest.CopyFrom(sour, sour.Size);
-      sour.Position := 0;
-      Dest.Position := 0;
-
-      d := GetTimeTick;
-
-      cBase := CreateCipherClass(cs, k);
-      cBase.FProcessTail := True;
-      cBase.FCBC := True;
-      cBase.Encrypt(Dest.Memory, Dest.Size);
-
-      if not TCipher.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, False, True) then
-          DoStatus('%s: Decode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-
-      DoStatus('%s - normal performance:%dms', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs)), GetTimeTick - d]);
-      if not TCipher.CompareHash(TCipher.GenerateSHA1Hash(Dest.Memory, Dest.Size), sourHash) then
-          DoStatus('%s encrypt for %s hash error!', [cBase.ClassName, GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
-      DisposeObject(cBase);
-    end;
-
-  // hash performance
-  DoStatus(#13#10'hash performance test');
-  Dest.Clear;
-  sour.Position := 0;
-  Dest.CopyFrom(sour, sour.Size);
-  sour.Position := 0;
-  Dest.Position := 0;
-
-  for hs := low(THashSecurity) to high(THashSecurity) do
-    begin
-      d := GetTimeTick;
-      TCipher.GenerateHashByte(hs, Dest.Memory, Dest.Size, hByte);
-      DoStatus('%s - performance:%dms', [GetEnumName(TypeInfo(THashSecurity), Integer(hs)), (GetTimeTick - d)]);
-    end;
-
-  DoStatus(#13#10'Cipher test done!');
-  DisposeObject([ps, sour, Dest]);
 end;
 
 { TBlowfish }
@@ -10410,9 +10134,8 @@ end;
 constructor TCipher_Base.Create(KeyBuffer_: TCipherKeyBuffer);
 begin
   inherited Create;
-  SetLength(FKeyBuffer, length(KeyBuffer_));
-  CopyPtr(@KeyBuffer_[0], @FKeyBuffer[0], length(KeyBuffer_));
-
+  FCipherSecurity := csNone;
+  SetLength(FLastGenerateKey, 0);
   FLevel := 1;
   FProcessTail := True;
   FCBC := False;
@@ -10420,7 +10143,7 @@ end;
 
 destructor TCipher_Base.Destroy;
 begin
-  SetLength(FKeyBuffer, 0);
+  SetLength(FLastGenerateKey, 0);
   inherited Destroy;
 end;
 
@@ -11244,14 +10967,307 @@ begin
     csRijndael: Result := TCipher_Rijndael.Create(KeyBuffer_);
     else Result := TCipher_Base.Create(KeyBuffer_);
   end;
+  Result.FCipherSecurity := cs;
 end;
 
-function CreateCipherClass(cs: TCipherSecurity; KeyBuffer_: TPascalString): TCipher_Base;
+function CreateCipherClassFromPassword(cs: TCipherSecurity; password_: TPascalString): TCipher_Base;
 var
   k: TCipherKeyBuffer;
 begin
-  TCipher.GenerateKey(cs, KeyBuffer_, k);
+  TCipher.GenerateKey(cs, password_, k);
   Result := CreateCipherClass(cs, k);
+end;
+
+function CreateCipherClassFromBuffer(cs: TCipherSecurity; key: TCipherKeyBuffer): TCipher_Base;
+var
+  k: TCipherKeyBuffer;
+begin
+  TCipher.GenerateKey(cs, @key[0], length(key), k);
+  Result := CreateCipherClass(cs, k);
+  SetLength(k, 0);
+  // copy key
+  SetLength(Result.FLastGenerateKey, length(key));
+  CopyPtr(@key[0], @Result.FLastGenerateKey[0], length(key));
+end;
+
+procedure TestCoreCipher;
+var
+  Buffer: TBytes;
+  sour, Dest: TMemoryStream64;
+  k: TCipherKeyBuffer;
+  cs: TCipherSecurity;
+  sourHash: TSHA1Digest;
+  d: TTimeTick;
+
+  hs: THashSecurity;
+  hByte: TBytes;
+
+{$IFDEF Parallel}
+  Parallel: TParallelCipher;
+{$ENDIF}
+  ps: TListPascalString;
+  cBase: TCipher_Base;
+
+  s: TPascalString;
+begin
+  sour := TMemoryStream64.Create;
+  sour.Size := Int64(10 * 1024 * 1024 + 9);
+
+  FillPtrByte(sour.Memory, sour.Size, $7F);
+  DoStatus('stream mode md5 :' + umlStreamMD5String(sour).Text);
+  DoStatus('pointer mode md5:' + umlMD5String(sour.Memory, sour.Size).Text);
+
+  DisposeObject(sour);
+
+  DoStatus('Generate and verify QuantumCryptographyPassword test');
+  s := GenerateQuantumCryptographyPassword('123456');
+  if not CompareQuantumCryptographyPassword('123456', s) then
+      DoStatus('QuantumCryptographyPassword failed!');
+  if CompareQuantumCryptographyPassword('1234560', s) then
+      DoStatus('QuantumCryptographyPassword failed!');
+
+  DoStatus('Generate and verify password test');
+  DoStatus('verify short password');
+  s := GeneratePasswordHash(TCipher.CAllHash, '1');
+  if not ComparePasswordHash('1', s) then
+      DoStatus('PasswordHash failed!');
+  if ComparePasswordHash('11', s) then
+      DoStatus('PasswordHash failed!');
+
+  DoStatus('verify long password');
+  s := GeneratePasswordHash(TCipher.CAllHash, 'hello world 123456');
+  if not ComparePasswordHash('hello world 123456', s) then
+      DoStatus('PasswordHash failed!');
+  if ComparePasswordHash('111 hello world 123456', s) then
+      DoStatus('PasswordHash failed!');
+
+  DoStatus('verify full chiher style password');
+  s := GeneratePassword(TCipher.AllCipher, 'hello world');
+  if not ComparePassword(TCipher.AllCipher, 'hello world', s) then
+      DoStatus('Password cipher test failed! cipher: %s', ['']);
+  if ComparePassword(TCipher.AllCipher, 'hello_world', s) then
+      DoStatus('Password cipher test failed! cipher: %s', ['']);
+
+  for cs in TCipher.AllCipher do
+    begin
+      DoStatus('verify %s chiher style password', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+      s := GeneratePassword(TCipher.AllCipher, 'hello world');
+      if not ComparePassword(TCipher.AllCipher, 'hello world', s) then
+          DoStatus('Password cipher test failed! cipher: %s', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+      if ComparePassword(TCipher.AllCipher, 'hello_world', s) then
+          DoStatus('Password cipher test failed! cipher: %s', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+    end;
+
+  // hash and Sequence Encrypt
+  SetLength(Buffer, 128 * 1024);
+  FillPtrByte(@Buffer[0], length(Buffer), 99);
+
+  ps := TListPascalString.Create;
+
+  DoStatus('Generate Sequence Hash');
+  GenerateSequHash(TCipher.CAllHash, @Buffer[0], length(Buffer), ps);
+  // DoStatus(ps.Text);
+
+  if not CompareSequHash(ps, @Buffer[0], length(Buffer)) then
+      DoStatus('hash compare failed!');
+
+  DoStatus('test Sequence Encrypt');
+  k := TPascalString('hello world').Bytes;
+  if not SequEncryptWithDirect(TCipher.AllCipher, @Buffer[0], length(Buffer), k, True, True) then
+      DoStatus('SequEncrypt failed!');
+  if not SequEncryptWithDirect(TCipher.AllCipher, @Buffer[0], length(Buffer), k, False, True) then
+      DoStatus('SequEncrypt failed!');
+
+  DoStatus('verify Sequence Encrypt');
+  if not CompareSequHash(ps, @Buffer[0], length(Buffer)) then
+      DoStatus('hash compare failed!');
+
+  // cipher Encrypt performance
+  SetLength(Buffer, 1024 * 1024 * 1 + 99);
+  FillPtrByte(@Buffer[0], length(Buffer), $7F);
+
+  sour := TMemoryStream64.Create;
+  Dest := TMemoryStream64.Create;
+  sour.write(Buffer[0], high(Buffer));
+
+  Dest.Clear;
+  sour.Position := 0;
+  Dest.CopyFrom(sour, sour.Size);
+  sour.Position := 0;
+  Dest.Position := 0;
+
+  sourHash := TCipher.GenerateSHA1Hash(sour.Memory, sour.Size);
+
+{$IFDEF Parallel}
+  DoStatus(#13#10'Parallel cipher performance test');
+
+  for cs in TCipher.AllCipher do
+    begin
+      TCipher.GenerateKey(cs, 'hello world', k);
+      Parallel := TParallelCipher.Create;
+
+      Dest.Clear;
+      sour.Position := 0;
+      Dest.CopyFrom(sour, sour.Size);
+      sour.Position := 0;
+      Dest.Position := 0;
+
+      d := GetTimeTick;
+
+      if not Parallel.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, True, True) then
+          DoStatus('%s: Parallel encode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+      if not Parallel.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, False, True) then
+          DoStatus('%s: Parallel decode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+      DoStatus('%s - Parallel performance:%dms', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs)), GetTimeTick - d]);
+
+      if not TCipher.CompareHash(TCipher.GenerateSHA1Hash(Dest.Memory, Dest.Size), sourHash) then
+          DoStatus('%s Parallel hash error!', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+
+      DisposeObject(Parallel);
+    end;
+
+  for cs in TCipher.AllCipher do
+    begin
+      TCipher.GenerateKey(cs, 'hello world', k);
+      Parallel := TParallelCipher.Create;
+
+      Dest.Clear;
+      sour.Position := 0;
+      Dest.CopyFrom(sour, sour.Size);
+      sour.Position := 0;
+      Dest.Position := 0;
+
+      d := GetTimeTick;
+
+      if not TCipher.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, True, True) then
+          DoStatus('%s: normal 2 Parallel encode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+      if not Parallel.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, False, True) then
+          DoStatus('%s: normal 2 Parallel decode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+      DoStatus('%s - normal 2 Parallel performance:%dms', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs)), GetTimeTick - d]);
+
+      if not TCipher.CompareHash(TCipher.GenerateSHA1Hash(Dest.Memory, Dest.Size), sourHash) then
+          DoStatus('%s normal 2 Parallel hash error!', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+
+      DisposeObject(Parallel);
+    end;
+
+  for cs in TCipher.AllCipher do
+    begin
+      TCipher.GenerateKey(cs, 'hello world', k);
+      Parallel := TParallelCipher.Create;
+
+      Dest.Clear;
+      sour.Position := 0;
+      Dest.CopyFrom(sour, sour.Size);
+      sour.Position := 0;
+      Dest.Position := 0;
+
+      d := GetTimeTick;
+
+      if not Parallel.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, True, True) then
+          DoStatus('%s: Parallel 2 normal encode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+      if not TCipher.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, False, True) then
+          DoStatus('%s: Parallel 2 normal decode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+      DoStatus('%s - Parallel 2 normal performance:%dms', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs)), GetTimeTick - d]);
+
+      if not TCipher.CompareHash(TCipher.GenerateSHA1Hash(Dest.Memory, Dest.Size), sourHash) then
+          DoStatus('%s Parallel 2 normal hash error!', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+
+      DisposeObject(Parallel);
+    end;
+{$ENDIF}
+  DoStatus(#13#10'normal cipher performance test');
+
+  for cs in TCipher.AllCipher do
+    begin
+      TCipher.GenerateKey(cs, 'hello world', k);
+
+      Dest.Clear;
+      sour.Position := 0;
+      Dest.CopyFrom(sour, sour.Size);
+      sour.Position := 0;
+      Dest.Position := 0;
+
+      d := GetTimeTick;
+      if not TCipher.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, True, True) then
+          DoStatus('%s: encode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+      if not TCipher.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, False, True) then
+          DoStatus('%s: decode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+      DoStatus('%s - normal performance:%dms', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs)), GetTimeTick - d]);
+      if not TCipher.CompareHash(TCipher.GenerateSHA1Hash(Dest.Memory, Dest.Size), sourHash) then
+          DoStatus('%s hash error!', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+    end;
+
+  DoStatus(#13#10'cipher instance classes test');
+  // cipher class test
+  for cs in TCipher.AllCipher do
+    begin
+      TCipher.GenerateKey(cs, 'hello world', k);
+
+      Dest.Clear;
+      sour.Position := 0;
+      Dest.CopyFrom(sour, sour.Size);
+      sour.Position := 0;
+      Dest.Position := 0;
+
+      d := GetTimeTick;
+      if not TCipher.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, True, True) then
+          DoStatus('%s: encode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+
+      cBase := CreateCipherClass(cs, k);
+      cBase.FProcessTail := True;
+      cBase.FCBC := True;
+      cBase.Decrypt(Dest.Memory, Dest.Size);
+
+      DoStatus('%s - instance encrypt performance:%dms', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs)), GetTimeTick - d]);
+      if not TCipher.CompareHash(TCipher.GenerateSHA1Hash(Dest.Memory, Dest.Size), sourHash) then
+          DoStatus('%s decrypt for %s hash error!', [cBase.ClassName, GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+      DisposeObject(cBase);
+    end;
+
+  for cs in TCipher.AllCipher do
+    begin
+      TCipher.GenerateKey(cs, 'hello world', k);
+
+      Dest.Clear;
+      sour.Position := 0;
+      Dest.CopyFrom(sour, sour.Size);
+      sour.Position := 0;
+      Dest.Position := 0;
+
+      d := GetTimeTick;
+
+      cBase := CreateCipherClass(cs, k);
+      cBase.FProcessTail := True;
+      cBase.FCBC := True;
+      cBase.Encrypt(Dest.Memory, Dest.Size);
+
+      if not TCipher.EncryptBufferCBC(cs, Dest.Memory, Dest.Size, @k, False, True) then
+          DoStatus('%s: Decode failed', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+
+      DoStatus('%s - instance encrypt performance:%dms', [GetEnumName(TypeInfo(TCipherSecurity), Integer(cs)), GetTimeTick - d]);
+      if not TCipher.CompareHash(TCipher.GenerateSHA1Hash(Dest.Memory, Dest.Size), sourHash) then
+          DoStatus('%s encrypt for %s hash error!', [cBase.ClassName, GetEnumName(TypeInfo(TCipherSecurity), Integer(cs))]);
+      DisposeObject(cBase);
+    end;
+
+  // hash performance
+  DoStatus(#13#10'hash performance test');
+  Dest.Clear;
+  sour.Position := 0;
+  Dest.CopyFrom(sour, sour.Size);
+  sour.Position := 0;
+  Dest.Position := 0;
+
+  for hs := low(THashSecurity) to high(THashSecurity) do
+    begin
+      d := GetTimeTick;
+      TCipher.GenerateHashByte(hs, Dest.Memory, Dest.Size, hByte);
+      DoStatus('%s - performance:%dms', [GetEnumName(TypeInfo(THashSecurity), Integer(hs)), (GetTimeTick - d)]);
+    end;
+
+  DoStatus(#13#10'Cipher test done!');
+  DisposeObject([ps, sour, Dest]);
 end;
 
 initialization
