@@ -153,7 +153,7 @@ type
   private
     FCipher: TCipher_Base;
   public
-    constructor Create(CipherSecurity_: TCipherSecurity; passoword_: U_String; Level_: Integer; Tail_, CBC_: Boolean);
+    constructor Create(CipherSecurity_: TCipherSecurity; password_: U_String; Level_: Integer; Tail_, CBC_: Boolean);
     destructor Destroy; override;
     procedure Encrypt(buff: Pointer; Size: NativeInt);
     procedure Decrypt(buff: Pointer; Size: NativeInt);
@@ -960,10 +960,10 @@ begin
   end;
 end;
 
-constructor TZDB2_Cipher.Create(CipherSecurity_: TCipherSecurity; passoword_: U_String; Level_: Integer; Tail_, CBC_: Boolean);
+constructor TZDB2_Cipher.Create(CipherSecurity_: TCipherSecurity; password_: U_String; Level_: Integer; Tail_, CBC_: Boolean);
 begin
   inherited Create;
-  FCipher := CreateCipherClass(CipherSecurity_, passoword_);
+  FCipher := CreateCipherClassFromPassword(CipherSecurity_, password_);
   FCipher.Level := Level_;
   FCipher.ProcessTail := Tail_;
   FCipher.CBC := CBC_;
@@ -2327,7 +2327,7 @@ var
   i: Integer;
   db1_crc16: TZDB2_CRC16;
 begin
-  Cipher_ := TZDB2_Cipher.Create(TCipherSecurity.csSerpent, 'hello world.', 1, False, True);
+  Cipher_ := TZDB2_Cipher.Create(TCipherSecurity.csRijndael, 'hello world.', 1, False, True);
 
   testList := TTestList_.Create;
 
@@ -2349,8 +2349,9 @@ begin
 
   for i := 0 to Length(TestArry) - 1 do
     begin
+      SetMT19937Seed(i);
       TestArry[i].data := TMemoryStream64.Create;
-      TestArry[i].data.Size := 1024 * 16 + umlRandomRange(0, 1024 * 1024);
+      TestArry[i].data.Size := 1024 * 16 + 1024 * 1024;
       MT19937Rand32(MaxInt, TestArry[i].data.Memory, TestArry[i].data.Size div 4);
       TestArry[i].sMD5 := umlStreamMD5(TestArry[i].data);
 
@@ -2368,6 +2369,7 @@ begin
 
   db1_place.Flush;
   DisposeObject(db1_place);
+  db1.Save;
 
   db1_crc16 := TZDB2_CRC16.Create;
   db1_crc16.Build(db1);
