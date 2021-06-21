@@ -564,6 +564,8 @@ type
     function GetCacheStream(const StorePos: Int64): TDBCacheStream64; overload;
     // backcall
     property NotifyIntf: IDBStoreBaseNotify read FNotifyIntf write FNotifyIntf;
+    property NotifyInterface: IDBStoreBaseNotify read FNotifyIntf write FNotifyIntf;
+    property OnNotify: IDBStoreBaseNotify read FNotifyIntf write FNotifyIntf;
 
     // baseapi
     function QueryFirst(var qState: TQueryState): Boolean;
@@ -668,6 +670,7 @@ type
     function BuildJson(const StorePos: Int64): TDBEngineJson; overload;
     function BuildJson(var qState: TQueryState): TDBEngineJson; overload;
     property Json[const StorePos: Int64]: TDBEngineJson read GetJson;
+    class function GetJsonFromStream(Stream_: TStream): TJsonObject;
 {$ENDIF}
     //
     // string operation
@@ -3212,7 +3215,7 @@ var
 begin
   M := TMemoryStream64.Create;
 
-  Buff.EncodeTo(M, False);
+  Buff.FastEncodeTo(M);
 
   Result := InsertData(InsertPos, M, c_DF);
   DisposeObject(M);
@@ -3224,7 +3227,7 @@ var
 begin
   M := TMemoryStream64.Create;
 
-  Buff.EncodeTo(M, False);
+  Buff.FastEncodeTo(M);
 
   Result := AddData(M, c_DF);
   DisposeObject(M);
@@ -3728,6 +3731,14 @@ function TDBStore.BuildJson(var qState: TQueryState): TDBEngineJson;
 begin
   Result := BuildJson(qState.StorePos);
 end;
+
+class function TDBStore.GetJsonFromStream(Stream_: TStream): TJsonObject;
+begin
+  Result := TJsonObject.Create;
+  Stream_.Position := 0;
+  Result.LoadFromStream(Stream_, TEncoding.UTF8, False);
+end;
+
 {$ENDIF}
 
 
@@ -3963,15 +3974,15 @@ DefaultCacheAnnealingTime := 15.0;
 DefaultMinimizeCacheOfFileSize := 16 * 1024 * 1024; // 16M
 
 {$IFDEF CPU64}
-DefaultCacheBufferLength := 10000 * 40;
-DefaultIndexCacheBufferLength := 10000 * 40;
-DefaultMinimizeInstanceCacheSize := 512 * 1024 * 1024; // 512M
-DefaultMaximumInstanceCacheSize := 1024 * 1024 * 1024; // 1GB
-DefaultMinimizeStreamCacheSize := 96 * 1024 * 1024;    // 96M
-DefaultMaximumStreamCacheSize := 128 * 1024 * 1024;    // 128M
+DefaultCacheBufferLength := 10000 * 100;              // 1000000
+DefaultIndexCacheBufferLength := 10000 * 100;         // 1000000
+DefaultMinimizeInstanceCacheSize := 64 * 1024 * 1024; // 64M
+DefaultMaximumInstanceCacheSize := 256 * 1024 * 1024; // 256M
+DefaultMinimizeStreamCacheSize := 96 * 1024 * 1024;   // 96M
+DefaultMaximumStreamCacheSize := 128 * 1024 * 1024;   // 128M
 {$ELSE}
-DefaultCacheBufferLength := 10000 * 10;
-DefaultIndexCacheBufferLength := 10000 * 10;
+DefaultCacheBufferLength := 10000 * 10;               // 100000
+DefaultIndexCacheBufferLength := 10000 * 10;          // 100000
 DefaultMinimizeInstanceCacheSize := 32 * 1024 * 1024; // 32M
 DefaultMaximumInstanceCacheSize := 128 * 1024 * 1024; // 128M
 DefaultMinimizeStreamCacheSize := 24 * 1024 * 1024;   // 24M
