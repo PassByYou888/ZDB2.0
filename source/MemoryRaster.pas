@@ -529,6 +529,7 @@ type
     procedure FillNoneBGColorBorder(BGColor, BorderColor: TRColor; BorderSize: Integer); overload;
     procedure FillNoneBGColorAlphaBorder(parallel_: Boolean; BGColor, BorderColor: TRColor; BorderSize: Integer; output: TMemoryRaster); overload;
     procedure FillNoneBGColorAlphaBorder(BGColor, BorderColor: TRColor; BorderSize: Integer; output: TMemoryRaster); overload;
+    procedure FillNoneBGColorAlphaBorder(BGColor, BorderColor: TRColor; BorderSize: Integer); overload;
 
     { rasterization text support }
     function TextSize(Text: SystemString; siz: TGeoFloat): TVec2;
@@ -800,6 +801,7 @@ type
     class function CanLoadStream(stream: TCoreClassStream): Boolean; override;
     procedure LoadFromStream(stream: TCoreClassStream); override;
     procedure SaveToStream(stream: TCoreClassStream); override;
+    procedure SaveToSequenceStream(stream: TCoreClassStream);
 
     property Total: Integer read FTotal write FTotal;
     property Column: Integer read FColumn write FColumn;
@@ -836,11 +838,11 @@ type
   public
     procedure Attach(raster: TMemoryRaster); overload;
 
-    procedure FillLinearGradient(X1, Y1, X2, Y2: Double; c1, c2: TRColor; Profile: Double = 1);
-    procedure LineLinearGradient(X1, Y1, X2, Y2: Double; c1, c2: TRColor; Profile: Double = 1);
+    procedure FillLinearGradient(X1, Y1, X2, Y2: Double; c1, c2: TRColor; Profile: Double);
+    procedure LineLinearGradient(X1, Y1, X2, Y2: Double; c1, c2: TRColor; Profile: Double);
 
-    procedure FillRadialGradient(X, Y, R: Double; c1, c2: TRColor; Profile: Double = 1); overload;
-    procedure LineRadialGradient(X, Y, R: Double; c1, c2: TRColor; Profile: Double = 1); overload;
+    procedure FillRadialGradient(X, Y, R: Double; c1, c2: TRColor; Profile: Double); overload;
+    procedure LineRadialGradient(X, Y, R: Double; c1, c2: TRColor; Profile: Double); overload;
 
     procedure FillRadialGradient(X, Y, R: Double; c1, c2, c3: TRColor); overload;
     procedure LineRadialGradient(X, Y, R: Double; c1, c2, c3: TRColor); overload;
@@ -1094,12 +1096,16 @@ type
     // build text raster
     function BuildText(Text: TFontRasterString; RotateVec: TVec2; Angle, alpha, siz: TGeoFloat; TextColor: TRColor; var DrawCoordinate, BoundBoxCoordinate: TArrayV2R4): TMemoryRaster; overload;
     function BuildText(Edge: Integer; Text: TFontRasterString; RotateVec: TVec2; Angle, alpha, siz: TGeoFloat; TextColor: TRColor; var DrawCoordinate, BoundBoxCoordinate: TArrayV2R4): TMemoryRaster; overload;
+    function BuildEffectText(Edge: Integer; Text: TFontRasterString; RotateVec: TVec2; Angle, alpha, siz: TGeoFloat; TextColor: TRColor): TMemoryRaster;
+    function BuildEffectText_Edge(Text: TFontRasterString; RotateVec: TVec2; Angle, alpha, siz: TGeoFloat; TextColor, EdgeColor: TRColor): TMemoryRaster;
 
-    // build text from random font
+    // build array text from random font
     class function BuildTextRaster(Random_: TRandom; PhysicsBox_: Boolean; X_Spacing_, Y_Spacing_: Integer; Margin_: TGeoFloat;
       Fonts: TFontRasterList; FontSize_, Angle_: TGeoFloat; Text_: TFontRasterArrayString; var OutputInfo: TFontTextInfos): TMemoryRaster; overload;
+    // build single text from random font
     class function BuildTextRaster(Random_: TRandom; PhysicsBox_: Boolean; X_Spacing_, Y_Spacing_: Integer; Margin_: TGeoFloat;
       Fonts: TFontRasterList; FontSize_, Angle_: TGeoFloat; Text_: TFontRasterString; var OutputInfo: TFontTextInfos): TMemoryRaster; overload;
+    // build fixed text
     class function BuildTextRaster(PhysicsBox_: Boolean; X_Spacing_, Y_Spacing_: Integer; Margin_: TGeoFloat;
       Fonts: TFontRasterList; FontSize_, Angle_: TGeoFloat; Text_: TFontRasterString; color_: TRColor; var OutputInfo: TFontTextInfos): TMemoryRaster; overload;
 

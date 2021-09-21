@@ -16,20 +16,6 @@
 { * https://github.com/PassByYou888/InfiniteIoT                                * }
 { * https://github.com/PassByYou888/FastMD5                                    * }
 { ****************************************************************************** }
-
-(*
-  update history
-  2017-11-26
-  "String" define change as "SystemString"
-
-  2017-12-5
-  added support int64 hash object : TInt64HashObjectList
-  added support pointer-NativeUInt hash : TPointerHashNativeUIntList
-
-  2018-4-17
-  added support big StringList with TListString and TListPascalString
-*)
-
 unit ListEngine;
 
 {$INCLUDE zDefine.inc}
@@ -567,7 +553,7 @@ type
 {$ENDREGION 'TPointerHashNativeUIntList'}
 {$REGION 'THashObjectList'}
 
-  THashObjectChangeEvent = procedure(Sender: THashObjectList; Name: SystemString; _OLD, _New: TCoreClassObject) of object;
+  THashObjectChangeEvent = procedure(Sender: THashObjectList; Name: SystemString; OLD_, New_: TCoreClassObject) of object;
 
   THashObjectListData = record
     Obj: TCoreClassObject;
@@ -627,8 +613,8 @@ type
     procedure GetAsList(OutputList: TCoreClassListForObj);
     function GetObjAsName(Obj: TCoreClassObject): SystemString;
     procedure Delete(const Name: SystemString);
-    function Add(const Name: SystemString; _Object: TCoreClassObject): TCoreClassObject;
-    function FastAdd(const Name: SystemString; _Object: TCoreClassObject): TCoreClassObject;
+    function Add(const Name: SystemString; Obj_: TCoreClassObject): TCoreClassObject;
+    function FastAdd(const Name: SystemString; Obj_: TCoreClassObject): TCoreClassObject;
     function Find(const Name: SystemString): TCoreClassObject;
     function Exists(const Name: SystemString): Boolean;
     function ExistsObject(Obj: TCoreClassObject): Boolean;
@@ -650,7 +636,7 @@ type
 {$ENDREGION 'THashObjectList'}
 {$REGION 'THashStringList'}
 
-  THashStringChangeEvent = procedure(Sender: THashStringList; Name: SystemString; _OLD, _New: SystemString) of object;
+  THashStringChangeEvent = procedure(Sender: THashStringList; Name: SystemString; OLD_, New_: SystemString) of object;
 
   THashStringListData = record
     v: SystemString;
@@ -724,6 +710,7 @@ type
 
     function GetDefaultValue(const Name: SystemString; AValue: SystemString): SystemString;
     procedure SetDefaultValue(const Name: SystemString; AValue: SystemString);
+
     function ProcessMacro(const Text_, HeadToken, TailToken: SystemString; var Output_: SystemString): Boolean;
 
     property AutoUpdateDefaultValue: Boolean read FAutoUpdateDefaultValue write FAutoUpdateDefaultValue;
@@ -785,7 +772,7 @@ type
   PHashStringList = ^THashStringList;
 {$ENDREGION 'THashStringList'}
 {$REGION 'THashVariantList'}
-  THashVariantChangeEvent = procedure(Sender: THashVariantList; Name: SystemString; _OLD, _New: Variant) of object;
+  THashVariantChangeEvent = procedure(Sender: THashVariantList; Name: SystemString; OLD_, New_: Variant) of object;
 
   THashVariantListData = record
     v: Variant;
@@ -6226,7 +6213,7 @@ begin
   FHashList.Delete(Name);
 end;
 
-function THashObjectList.Add(const Name: SystemString; _Object: TCoreClassObject): TCoreClassObject;
+function THashObjectList.Add(const Name: SystemString; Obj_: TCoreClassObject): TCoreClassObject;
 var
   pObjData: PHashObjectListData;
 begin
@@ -6235,7 +6222,7 @@ begin
     begin
       try
         if Assigned(pObjData^.OnChnage) then
-            pObjData^.OnChnage(Self, Name, pObjData^.Obj, _Object);
+            pObjData^.OnChnage(Self, Name, pObjData^.Obj, Obj_);
       except
       end;
 
@@ -6255,11 +6242,11 @@ begin
       FHashList.Add(Name, pObjData, False);
     end;
 
-  pObjData^.Obj := _Object;
-  Result := _Object;
+  pObjData^.Obj := Obj_;
+  Result := Obj_;
 end;
 
-function THashObjectList.FastAdd(const Name: SystemString; _Object: TCoreClassObject): TCoreClassObject;
+function THashObjectList.FastAdd(const Name: SystemString; Obj_: TCoreClassObject): TCoreClassObject;
 var
   pObjData: PHashObjectListData;
 begin
@@ -6267,8 +6254,8 @@ begin
   pObjData^.OnChnage := nil;
   FHashList.Add(Name, pObjData, False);
 
-  pObjData^.Obj := _Object;
-  Result := _Object;
+  pObjData^.Obj := Obj_;
+  Result := Obj_;
 end;
 
 function THashObjectList.Find(const Name: SystemString): TCoreClassObject;
@@ -6883,20 +6870,20 @@ begin
 
   i := 1;
 
-  while i <= sour.Len do
+  while i <= sour.L do
     begin
       if sour.ComparePos(i, h) then
         begin
           bPos := i;
-          ePos := sour.GetPos(t, i + h.Len);
+          ePos := sour.GetPos(t, i + h.L);
           if ePos > 0 then
             begin
-              KeyText := sour.Copy(bPos + h.Len, ePos - (bPos + h.Len)).Text;
+              KeyText := sour.Copy(bPos + h.L, ePos - (bPos + h.L)).Text;
 
               if Exists(KeyText) then
                 begin
                   Output_ := Output_ + GetKeyValue(KeyText);
-                  i := ePos + t.Len;
+                  i := ePos + t.L;
                   Continue;
                 end
               else
@@ -7109,7 +7096,7 @@ begin
         if ((n.Exists(':')) or (n.Exists('='))) and (not CharIn(n.First, [':', '='])) then
           begin
             TextName := umlGetFirstStr_Discontinuity(n, ':=');
-            if TextName.Len > 0 then
+            if TextName.L > 0 then
               begin
                 TextValue := umlDeleteFirstStr_Discontinuity(n, ':=');
                 FStringList[TextName.Text] := StrToV(TextValue.Text);
@@ -7938,20 +7925,20 @@ begin
 
   i := 1;
 
-  while i <= sour.Len do
+  while i <= sour.L do
     begin
       if sour.ComparePos(i, h) then
         begin
           bPos := i;
-          ePos := sour.GetPos(t, i + h.Len);
+          ePos := sour.GetPos(t, i + h.L);
           if ePos > 0 then
             begin
-              KeyText := sour.Copy(bPos + h.Len, ePos - (bPos + h.Len)).Text;
+              KeyText := sour.Copy(bPos + h.L, ePos - (bPos + h.L)).Text;
 
               if Exists(KeyText) then
                 begin
                   Output_ := Output_ + VarToStr(GetKeyValue(KeyText));
-                  i := ePos + t.Len;
+                  i := ePos + t.L;
                   Continue;
                 end
               else
@@ -8223,7 +8210,7 @@ begin
         if ((n.Exists(':')) or (n.Exists('='))) and (not CharIn(n.First, [':', '='])) then
           begin
             TextName := umlGetFirstStr_Discontinuity(n, ':=');
-            if TextName.Len > 0 then
+            if TextName.L > 0 then
               begin
                 TextValue := umlDeleteFirstStr_Discontinuity(n, ':=');
                 FVariantList[TextName.Text] := StrToV(TextValue.Text);

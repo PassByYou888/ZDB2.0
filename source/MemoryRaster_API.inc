@@ -2375,41 +2375,41 @@ function BuildSequenceFrame(bmp32List: TCoreClassListForObj; Column: Integer; Tr
 var
   C: TRColor;
   bmp: TMemoryRaster;
-  AMaxWidth, AMaxHeight: Integer;
+  MaxWidth_, MaxHeight_: Integer;
   i: Integer;
   idx, X, Y: Integer;
   newbmp: TMemoryRaster;
-  rowcnt: Integer;
+  rowNum: Integer;
 begin
   if Column > bmp32List.Count then
       Column := bmp32List.Count;
 
-  AMaxWidth := 0;
-  AMaxHeight := 0;
+  MaxWidth_ := 0;
+  MaxHeight_ := 0;
   for i := 0 to bmp32List.Count - 1 do
     begin
       bmp := bmp32List[i] as TMemoryRaster;
       if Transparent then
           bmp.ColorTransparent(bmp[0, 0]);
 
-      if bmp.width > AMaxWidth then
-          AMaxWidth := bmp.width;
-      if bmp.height > AMaxHeight then
-          AMaxHeight := bmp.height;
+      if bmp.width > MaxWidth_ then
+          MaxWidth_ := bmp.width;
+      if bmp.height > MaxHeight_ then
+          MaxHeight_ := bmp.height;
     end;
 
   Result := TSequenceMemoryRaster.Create;
 
-  rowcnt := bmp32List.Count div Column;
+  rowNum := bmp32List.Count div Column;
   if bmp32List.Count mod Column > 0 then
-      inc(rowcnt);
+      inc(rowNum);
 
   if Transparent then
       C := RColor(0, 0, 0, 0)
   else
       C := RColor(0, 0, 0, $FF);
 
-  Result.SetSize(AMaxWidth * Column, AMaxHeight * rowcnt, C);
+  Result.SetSize(MaxWidth_ * Column, MaxHeight_ * rowNum, C);
 
   idx := 0;
   X := 0;
@@ -2418,10 +2418,10 @@ begin
   for i := 0 to bmp32List.Count - 1 do
     begin
       bmp := bmp32List[i] as TMemoryRaster;
-      if (bmp.width <> AMaxWidth) or (bmp.height <> AMaxHeight) then
+      if (bmp.width <> MaxWidth_) or (bmp.height <> MaxHeight_) then
         begin
           newbmp := TMemoryRaster.Create;
-          newbmp.ZoomFrom(bmp, AMaxWidth, AMaxHeight);
+          newbmp.ZoomFrom(bmp, MaxWidth_, MaxHeight_);
           BlockTransfer(Result, X, Y, Result.BoundsRect, newbmp, newbmp.BoundsRect, dmOpaque);
           DisposeObject(newbmp);
         end
@@ -2434,12 +2434,12 @@ begin
         begin
           idx := 0;
           X := 0;
-          Y := Y + AMaxHeight;
+          Y := Y + MaxHeight_;
         end
       else
         begin
           inc(idx);
-          X := X + AMaxWidth;
+          X := X + MaxWidth_;
         end;
     end;
 

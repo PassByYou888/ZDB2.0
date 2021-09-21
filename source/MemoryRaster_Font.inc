@@ -1385,7 +1385,7 @@ begin
   w := Round(RectWidth(r2));
   h := Round(RectHeight(r2));
   Result := NewRaster();
-  Result.SetSize(w, h, RColorF(0, 0, 0, 0));
+  Result.SetSize(w, h, 0);
   DrawText(Text, Result, X, Y, RotateVec, Angle, alpha, siz, TextColor);
   ComputeDrawCoordinate(Text, X, Y, RotateVec, Angle, siz, DrawCoordinate, BoundBoxCoordinate);
 end;
@@ -1403,9 +1403,32 @@ begin
   w := Round(RectWidth(r2)) + Edge * 2;
   h := Round(RectHeight(r2)) + Edge * 2;
   Result := NewRaster();
-  Result.SetSize(w, h, RColorF(0, 0, 0, 0));
+  Result.SetSize(w, h, 0);
   DrawText(Text, Result, X, Y, RotateVec, Angle, alpha, siz, TextColor);
   ComputeDrawCoordinate(Text, X, Y, RotateVec, Angle, siz, DrawCoordinate, BoundBoxCoordinate);
+end;
+
+function TFontRaster.BuildEffectText(Edge: Integer; Text: TFontRasterString; RotateVec: TVec2; Angle, alpha, siz: TGeoFloat; TextColor: TRColor): TMemoryRaster;
+var
+  s: TVec2;
+  r2: TRectV2;
+  X, Y, w, h: Integer;
+begin
+  s := TextSize(Text);
+  r2 := TV2R4.Init(RectV2(0, 0, s), Vec2Mul(s, RotateVec), Angle).Mul(siz / FontSize).BoundRect();
+  X := Round(abs(r2[0, 0])) + Edge;
+  Y := Round(abs(r2[0, 1])) + Edge;
+  w := Round(RectWidth(r2)) + Edge * 2;
+  h := Round(RectHeight(r2)) + Edge * 2;
+  Result := NewRaster();
+  Result.SetSize(w, h, 0);
+  DrawText(Text, Result, X, Y, RotateVec, Angle, alpha, siz, TextColor);
+end;
+
+function TFontRaster.BuildEffectText_Edge(Text: TFontRasterString; RotateVec: TVec2; Angle, alpha, siz: TGeoFloat; TextColor, EdgeColor: TRColor): TMemoryRaster;
+begin
+  Result := BuildEffectText(Round(siz * 0.15), Text, RotateVec, Angle, alpha, siz, TextColor);
+  Result.FillNoneBGColorAlphaBorder(0, EdgeColor, Round(siz * 0.1));
 end;
 
 class function TFontRaster.BuildTextRaster(Random_: TRandom; PhysicsBox_: Boolean; X_Spacing_, Y_Spacing_: Integer; Margin_: TGeoFloat;
