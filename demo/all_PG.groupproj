@@ -9,9 +9,6 @@
         <Projects Include="ZDB2FileEncoder\ZDB2FileEncoder.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="ZDB2CoreTest\ZDB2CoreTest.dproj">
-            <Dependencies/>
-        </Projects>
         <Projects Include="ZDBPerfTest\ZDBPerfTest.dproj">
             <Dependencies/>
         </Projects>
@@ -41,15 +38,6 @@
     <Target Name="ZDB2FileEncoder:Make">
         <MSBuild Projects="ZDB2FileEncoder\ZDB2FileEncoder.dproj" Targets="Make"/>
     </Target>
-    <Target Name="ZDB2CoreTest">
-        <MSBuild Projects="ZDB2CoreTest\ZDB2CoreTest.dproj"/>
-    </Target>
-    <Target Name="ZDB2CoreTest:Clean">
-        <MSBuild Projects="ZDB2CoreTest\ZDB2CoreTest.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="ZDB2CoreTest:Make">
-        <MSBuild Projects="ZDB2CoreTest\ZDB2CoreTest.dproj" Targets="Make"/>
-    </Target>
     <Target Name="ZDBPerfTest">
         <MSBuild Projects="ZDBPerfTest\ZDBPerfTest.dproj"/>
     </Target>
@@ -60,13 +48,13 @@
         <MSBuild Projects="ZDBPerfTest\ZDBPerfTest.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="ZDB2FileDecoder;ZDB2FileEncoder;ZDB2CoreTest;ZDBPerfTest"/>
+        <CallTarget Targets="ZDB2FileDecoder;ZDB2FileEncoder;ZDBPerfTest"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="ZDB2FileDecoder:Clean;ZDB2FileEncoder:Clean;ZDB2CoreTest:Clean;ZDBPerfTest:Clean"/>
+        <CallTarget Targets="ZDB2FileDecoder:Clean;ZDB2FileEncoder:Clean;ZDBPerfTest:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="ZDB2FileDecoder:Make;ZDB2FileEncoder:Make;ZDB2CoreTest:Make;ZDBPerfTest:Make"/>
+        <CallTarget Targets="ZDB2FileDecoder:Make;ZDB2FileEncoder:Make;ZDBPerfTest:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
