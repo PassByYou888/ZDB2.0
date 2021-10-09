@@ -792,6 +792,8 @@ function IsMobile: Boolean;
 function GetTimeTick(): TTimeTick;
 function GetTimeTickCount(): TTimeTick;
 function GetCrashTimeTick(): TTimeTick;
+function SameF(const A, B: Double; Epsilon: Double = 0): Boolean; overload;
+function SameF(const A, B: Single; Epsilon: Single = 0): Boolean; overload;
 
 // MT19937 random num
 function MT19937CoreToDelphi: Boolean;
@@ -1035,7 +1037,7 @@ var
   d: PByte;
   v: UInt64;
 begin
-  if Count <= 0 then
+  if Count = 0 then
       Exit;
   v := Value or (Value shl 8) or (Value shl 16) or (Value shl 24);
   v := v or (v shl 32);
@@ -1077,7 +1079,7 @@ function CompareMemory(const p1, p2: Pointer; Count: NativeUInt): Boolean;
 var
   b1, b2: PByte;
 begin;
-  if Count <= 0 then
+  if Count = 0 then
     begin
       Result := True;
       Exit;
@@ -1236,6 +1238,30 @@ end;
 function GetCrashTimeTick(): TTimeTick;
 begin
   Result := $FFFFFFFFFFFFFFFF - GetTimeTick();
+end;
+
+function SameF(const A, B: Double; Epsilon: Double = 0): Boolean;
+const
+  C_DoubleResolution = 1E-15 * 1000;
+begin
+  if Epsilon = 0 then
+      Epsilon := Max(Min(Abs(A), Abs(B)) * C_DoubleResolution, C_DoubleResolution);
+  if A > B then
+      Result := (A - B) <= Epsilon
+  else
+      Result := (B - A) <= Epsilon;
+end;
+
+function SameF(const A, B: Single; Epsilon: Single = 0): Boolean;
+const
+  C_SingleResolution = 1E-7 * 1000;
+begin
+  if Epsilon = 0 then
+      Epsilon := Max(Min(Abs(A), Abs(B)) * C_SingleResolution, C_SingleResolution);
+  if A > B then
+      Result := (A - B) <= Epsilon
+  else
+      Result := (B - A) <= Epsilon;
 end;
 
 {$INCLUDE CoreEndian.inc}

@@ -474,6 +474,7 @@ type
     FReader: TDataFrameEngineReader;
     FCompressorDeflate: TCompressorDeflate;
     FCompressorBRRC: TCompressorBRRC;
+    FIsChanged: Boolean;
   protected
     function DataTypeToByte(v: TRunTimeDataType): Byte;
     function ByteToDataType(v: Byte): TRunTimeDataType;
@@ -483,6 +484,7 @@ type
 
     property Reader: TDataFrameEngineReader read FReader;
     property R: TDataFrameEngineReader read FReader;
+    property IsChanged: Boolean read FIsChanged write FIsChanged;
 
     procedure SwapInstance(source: TDataFrameEngine);
 
@@ -496,12 +498,12 @@ type
     function DeleteLast: Boolean; overload;
     function DeleteLastCount(num_: Integer): Boolean; overload;
     function DeleteCount(index_, Count_: Integer): Boolean;
-    //
     procedure Assign(source: TDataFrameEngine);
     function Clone: TDataFrameEngine;
-    //
+
     procedure WriteString(v: SystemString); overload;
     procedure WriteString(v: TPascalString); overload;
+    procedure WriteString(const Fmt: SystemString; const Args: array of const); overload;
     procedure WriteBytes(v: TBytes);
     procedure WriteInteger(v: Integer);
     procedure WriteCardinal(v: Cardinal);
@@ -527,12 +529,16 @@ type
     procedure WriteListStrings(v: TListString);
     procedure WritePascalStrings(v: TListPascalString);
     procedure WriteDataFrame(v: TDataFrameEngine);
+    // select compresssion
     procedure WriteDataFrameCompressed(v: TDataFrameEngine);
+    // zlib compression
+    procedure WriteDataFrameZLib(v: TDataFrameEngine);
     procedure WriteHashStringList(v: THashStringList);
     procedure WriteVariantList(v: THashVariantList);
     procedure WriteSectionText(v: TSectionTextData);
     procedure WriteTextSection(v: TSectionTextData);
     procedure WriteJson(v: TZ_JsonObject); overload;
+    procedure WriteJson(v: TZ_JsonObject; Formated_: Boolean); overload;
 {$IFDEF DELPHI}
     procedure WriteJson(v: TJsonObject); overload;
 {$ENDIF DELPHI}
@@ -558,7 +564,7 @@ type
     procedure WriteNMPool(NMPool: TNumberModulePool);
     // auto append new stream and write
     procedure write(const Buf_; Count_: Int64);
-    //
+
     function ReadString(index_: Integer): SystemString;
     function ReadBytes(index_: Integer): TBytes;
     function ReadInteger(index_: Integer): Integer;
@@ -614,68 +620,53 @@ type
     procedure Read(index_: Integer; var Buf_; Count_: Int64); overload;
     // read as TDataFrameBase
     function Read(index_: Integer): TDataFrameBase; overload;
-    //
+
     function ComputeEncodeSize: Int64;
-
     class procedure BuildEmptyStream(output: TCoreClassStream);
-
     function FastEncode32To(output: TCoreClassStream; sizeInfo32: Cardinal): Integer;
     function FastEncode64To(output: TCoreClassStream; sizeInfo64: Int64): Integer;
     function FastEncodeTo(output: TCoreClassStream): Integer;
-
     function EncodeTo(output: TCoreClassStream; const FastMode, AutoCompressed: Boolean): Integer; overload;
     function EncodeTo(output: TCoreClassStream; const FastMode: Boolean): Integer; overload;
     function EncodeTo(output: TCoreClassStream): Integer; overload;
-
     // data security support
     // QuantumCryptographyPassword: used sha-3-512 cryptography as 512 bits password
     procedure Encrypt(output: TCoreClassStream; Compressed_: Boolean; SecurityLevel: Integer; Key: TCipherKeyBuffer);
     function Decrypt(input: TCoreClassStream; Key: TCipherKeyBuffer): Boolean;
-
     // json support
     procedure EncodeAsPublicJson(var output: TPascalString); overload;
     procedure EncodeAsPublicJson(output: TCoreClassStream); overload;
-    procedure EncodeAsJson(output: TCoreClassStream);
+    procedure EncodeAsJson(output: TCoreClassStream); overload;
+    procedure EncodeAsJson(json: TZ_JsonObject); overload;
     procedure DecodeFromJson(stream: TCoreClassStream); overload;
     procedure DecodeFromJson(const s: TPascalString); overload;
-    //
+    procedure DecodeFromJson(json: TZ_JsonObject); overload;
     // Parallel compressor
     function EncodeAsSelectCompressor(scm: TSelectCompressionMethod; output: TCoreClassStream; const FastMode: Boolean): Integer; overload;
     function EncodeAsSelectCompressor(output: TCoreClassStream; const FastMode: Boolean): Integer; overload;
     function EncodeAsSelectCompressor(output: TCoreClassStream): Integer; overload;
-
     // ZLib compressor
     function EncodeAsZLib(output: TCoreClassStream; const FastMode: Boolean): Integer; overload;
     function EncodeAsZLib(output: TCoreClassStream): Integer; overload;
-
     // Deflate compressor
     function EncodeAsDeflate(output: TCoreClassStream; const FastMode: Boolean): Integer; overload;
     function EncodeAsDeflate(output: TCoreClassStream): Integer; overload;
-
     // BRRC compressor
     function EncodeAsBRRC(output: TCoreClassStream; const FastMode: Boolean): Integer; overload;
     function EncodeAsBRRC(output: TCoreClassStream): Integer; overload;
-
     function IsCompressed(source: TCoreClassStream): Boolean;
 
     function DecodeFrom(source: TCoreClassStream; const FastMode: Boolean): Integer; overload;
     function DecodeFrom(source: TCoreClassStream): Integer; overload;
-
     procedure EncodeToBytes(const Compressed, FastMode: Boolean; var output: TBytes);
     procedure DecodeFromBytes(var buff: TBytes); overload;
     procedure DecodeFromBytes(var buff: TBytes; const FastMode: Boolean); overload;
-
     function GetMD5(const FastMode: Boolean): TMD5;
-
-    // fast compare
     function Compare(source: TDataFrameEngine): Boolean;
-
     procedure LoadFromStream(stream: TCoreClassStream);
     procedure SaveToStream(stream: TCoreClassStream);
-
     procedure LoadFromFile(fileName_: U_String);
     procedure SaveToFile(fileName_: U_String);
-
     property Data[index_: Integer]: TDataFrameBase read GetData; default;
     property List: TCoreClassListForObj read FDataList;
   end;
@@ -2266,6 +2257,7 @@ begin
   FReader := TDataFrameEngineReader.Create(Self);
   FCompressorDeflate := nil;
   FCompressorBRRC := nil;
+  FIsChanged := False;
 end;
 
 destructor TDataFrameEngine.Destroy;
@@ -2295,6 +2287,8 @@ begin
 
   source.FDataList := tmp_DataList;
   source.FReader := tmp_Reader;
+  FIsChanged := True;
+  source.FIsChanged := True;
 end;
 
 procedure TDataFrameEngine.Clear;
@@ -2344,6 +2338,7 @@ begin
   end;
   if Result <> nil then
       FDataList.Add(Result);
+  FIsChanged := True;
 end;
 
 function TDataFrameEngine.GetData(index_: Integer): TDataFrameBase;
@@ -2426,24 +2421,23 @@ end;
 
 procedure TDataFrameEngine.Assign(source: TDataFrameEngine);
 var
-  s: TMS64;
+  m64: TMS64;
   i: Integer;
   DataFrame_: TDataFrameBase;
 begin
   if Self = source then
       exit;
   Clear;
-  s := TMS64.CustomCreate(8192);
+  m64 := TMS64.CustomCreate(8192);
   for i := 0 to source.Count - 1 do
     begin
       DataFrame_ := AddData(ByteToDataType(source[i].FID));
-      s.Clear;
-      source[i].SaveToStream(s);
-      s.Position := 0;
-      DataFrame_.LoadFromStream(s);
-      s.Clear;
+      source[i].SaveToStream(m64);
+      m64.Position := 0;
+      DataFrame_.LoadFromStream(m64);
+      m64.Clear;
     end;
-  DisposeObject(s);
+  DisposeObject(m64);
 end;
 
 function TDataFrameEngine.Clone: TDataFrameEngine;
@@ -2468,6 +2462,11 @@ begin
   Obj_ := TDataFrameString.Create(DataTypeToByte(rdtString));
   Obj_.Buffer := v.Bytes;
   FDataList.Add(Obj_);
+end;
+
+procedure TDataFrameEngine.WriteString(const Fmt: SystemString; const Args: array of const);
+begin
+  WriteString(PFormat(Fmt, Args));
 end;
 
 procedure TDataFrameEngine.WriteBytes(v: TBytes);
@@ -2689,6 +2688,15 @@ begin
   FDataList.Add(Obj_);
 end;
 
+procedure TDataFrameEngine.WriteDataFrameZLib(v: TDataFrameEngine);
+var
+  Obj_: TDataFrameStream;
+begin
+  Obj_ := TDataFrameStream.Create(DataTypeToByte(rdtStream));
+  v.EncodeAsZLib(Obj_.Buffer, True);
+  FDataList.Add(Obj_);
+end;
+
 procedure TDataFrameEngine.WriteHashStringList(v: THashStringList);
 var
   ms: TMS64;
@@ -2734,11 +2742,16 @@ begin
 end;
 
 procedure TDataFrameEngine.WriteJson(v: TZ_JsonObject);
+begin
+  WriteJson(v, False);
+end;
+
+procedure TDataFrameEngine.WriteJson(v: TZ_JsonObject; Formated_: Boolean);
 var
   ms: TMS64;
 begin
   ms := TMS64.Create;
-  v.SaveToStream(ms, True);
+  v.SaveToStream(ms, Formated_);
   ms.Position := 0;
   WriteStream(ms);
   DisposeObject(ms);
@@ -2895,9 +2908,6 @@ var
 begin
   D_ := TDataFrameEngine.Create;
   D_.WriteString(NM.Name);
-  D_.WriteString(NM.SymbolName);
-  D_.WriteString(NM.Description);
-  D_.WriteString(NM.DetailDescription);
   D_.WriteVariant(NM.OriginValue);
   D_.WriteVariant(NM.CurrentValue);
   WriteDataFrame(D_);
@@ -2915,9 +2925,6 @@ var
   begin
     Tmp_ := TDataFrameEngine.Create;
     Tmp_.WriteString(NM.Name);
-    Tmp_.WriteString(NM.SymbolName);
-    Tmp_.WriteString(NM.Description);
-    Tmp_.WriteString(NM.DetailDescription);
     Tmp_.WriteVariant(NM.OriginValue);
     Tmp_.WriteVariant(NM.CurrentValue);
     D_.WriteDataFrame(Tmp_);
@@ -2938,9 +2945,6 @@ begin
     begin
       Tmp_ := TDataFrameEngine.Create;
       Tmp_.WriteString(NM.Name);
-      Tmp_.WriteString(NM.SymbolName);
-      Tmp_.WriteString(NM.Description);
-      Tmp_.WriteString(NM.DetailDescription);
       Tmp_.WriteVariant(NM.OriginValue);
       Tmp_.WriteVariant(NM.CurrentValue);
       D_.WriteDataFrame(Tmp_);
@@ -3570,6 +3574,7 @@ begin
   d := TMS64.Create;
   ReadStream(index_, d);
   d.Position := 0;
+  output.Clear;
   output.LoadFromStream(d);
   DisposeObject(d);
 end;
@@ -3584,6 +3589,7 @@ begin
   d := TMS64.Create;
   ReadStream(index_, d);
   d.Position := 0;
+  output.Clear;
   output.LoadFromStream(d, TEncoding.UTF8, True);
   DisposeObject(d);
 end;
@@ -3734,9 +3740,6 @@ begin
   D_ := TDataFrameEngine.Create;
   ReadDataFrame(index_, D_);
   output.Name := D_.Reader.ReadString;
-  output.SymbolName := D_.Reader.ReadString;
-  output.Description := D_.Reader.ReadString;
-  output.DetailDescription := D_.Reader.ReadString;
   output.DirectOriginValue := D_.Reader.ReadVariant;
   output.DirectCurrentValue := D_.Reader.ReadVariant;
   DisposeObject(D_);
@@ -3760,9 +3763,6 @@ begin
       N_ := Tmp_.Reader.ReadString;
       DM := output[N_];
       DM.Name := N_;
-      DM.SymbolName := Tmp_.Reader.ReadString;
-      DM.Description := Tmp_.Reader.ReadString;
-      DM.DetailDescription := Tmp_.Reader.ReadString;
       DM.DirectOriginValue := Tmp_.Reader.ReadVariant;
       DM.DirectCurrentValue := Tmp_.Reader.ReadVariant;
       L_.Add(DM);
@@ -4096,6 +4096,20 @@ begin
   DisposeObject(j);
 end;
 
+procedure TDataFrameEngine.EncodeAsJson(json: TZ_JsonObject);
+var
+  i: Integer;
+  DataFrame_: TDataFrameBase;
+begin
+  json.Clear;
+  for i := 0 to Count - 1 do
+    begin
+      DataFrame_ := TDataFrameBase(FDataList[i]);
+      DataFrame_.SaveToJson(json.a['Data'], i);
+      json.a['Ref'].Add(DataFrame_.FID);
+    end;
+end;
+
 procedure TDataFrameEngine.DecodeFromJson(stream: TCoreClassStream);
 var
   j: TZ_JsonObject;
@@ -4139,6 +4153,22 @@ begin
   DecodeFromJson(m64);
   DisposeObject(m64);
   SetLength(buff, 0);
+end;
+
+procedure TDataFrameEngine.DecodeFromJson(json: TZ_JsonObject);
+var
+  t: Byte;
+  i: Integer;
+  DataFrame_: TDataFrameBase;
+begin
+  Clear;
+
+  for i := 0 to json.a['Ref'].Count - 1 do
+    begin
+      t := json.a['Ref'].i[i];
+      DataFrame_ := AddData(ByteToDataType(t));
+      DataFrame_.LoadFromJson(json.a['Data'], i);
+    end;
 end;
 
 function TDataFrameEngine.EncodeAsSelectCompressor(scm: TSelectCompressionMethod; output: TCoreClassStream; const FastMode: Boolean): Integer;
@@ -4934,14 +4964,14 @@ destructor TDataWriter.Destroy;
 var
   FlagCompressed: Boolean;
   verflag: TBytes;
-  Len: Int64;
+  siz: Int64;
   M: TMS64;
 begin
   if FStream <> nil then
     begin
       M := TMS64.Create;
       FEngine.FastEncodeTo(M);
-      Len := M.Size;
+      siz := M.Size;
 
       // write version flag
       verflag := umlBytesOf('0001');
@@ -4951,12 +4981,12 @@ begin
       FlagCompressed := False;
       FStream.write(FlagCompressed, C_Boolean_Size);
 
-      // write length info
-      FStream.write(Len, C_Int64_Size);
+      // write siz info
+      FStream.write(siz, C_Int64_Size);
 
       // write buffer
       M.Position := 0;
-      FStream.CopyFrom(M, Len);
+      FStream.CopyFrom(M, siz);
       DisposeObject(M);
     end;
 
@@ -5223,7 +5253,7 @@ constructor TDataReader.Create(Stream_: TCoreClassStream);
 var
   verflag: TBytes;
   FlagCompressed: Boolean;
-  Len: Int64;
+  siz: Int64;
   M: TMS64;
 begin
   inherited Create;
@@ -5239,12 +5269,12 @@ begin
       // read compressed flag
       Stream_.Read(FlagCompressed, C_Boolean_Size);
 
-      // read length info
-      Stream_.Read(Len, C_Int64_Size);
+      // read size info
+      Stream_.Read(siz, C_Int64_Size);
 
-      // write buffer
+      // read buffer
       M := TMS64.Create;
-      M.CopyFrom(Stream_, Len);
+      M.CopyFrom(Stream_, siz);
       M.Position := 0;
       FEngine.DecodeFrom(M);
       DisposeObject(M);

@@ -129,11 +129,13 @@ type
     property Tag: Integer read FTag write FTag;
     property Instance: TZ_Instance_JsonObject read FInstance;
 
-    constructor Create(Parent_: TZ_JsonBase); overload; override;
     constructor Create(); overload;
+    constructor Create(Parent_: TZ_JsonBase); overload; override;
     destructor Destroy; override;
 
+    procedure SwapInstance(source_: TZ_JsonObject);
     procedure Assign(source_: TZ_JsonObject);
+    function Clone: TZ_JsonObject;
 
     procedure Clear;
     function IndexOf(const Name: string): Integer;
@@ -181,6 +183,9 @@ type
     procedure LoadFromLines(L_: TCoreClassStrings);
     procedure SaveToFile(FileName: SystemString);
     procedure LoadFromFile(FileName: SystemString);
+
+    function GetMD5: TMD5;
+    property MD5: TMD5 read GetMD5;
 
     procedure ParseText(Text_: TPascalString);
 
@@ -246,6 +251,11 @@ begin
   inherited Destroy;
 end;
 
+constructor TZ_JsonObject.Create;
+begin
+  Create(nil);
+end;
+
 constructor TZ_JsonObject.Create(Parent_: TZ_JsonBase);
 begin
   inherited Create(Parent_);
@@ -254,16 +264,36 @@ begin
       FInstance := TZ_Instance_JsonObject.Create;
 end;
 
-constructor TZ_JsonObject.Create;
-begin
-  Create(nil);
-end;
-
 destructor TZ_JsonObject.Destroy;
 begin
   if Parent = nil then
       FInstance.Free;
   inherited Destroy;
+end;
+
+procedure TZ_JsonObject.SwapInstance(source_: TZ_JsonObject);
+var
+  bak_FParent: TZ_JsonBase;
+  bak_FList: TCoreClassObjectList;
+  bak_FInstance: TZ_Instance_JsonObject;
+  bak_FTag: Integer;
+begin
+  if FParent <> nil then
+      raiseInfo('error.');
+  bak_FParent := FParent;
+  bak_FList := FList;
+  bak_FInstance := FInstance;
+  bak_FTag := FTag;
+
+  FParent := source_.FParent;
+  FList := source_.FList;
+  FInstance := source_.FInstance;
+  FTag := source_.FTag;
+
+  source_.FParent := bak_FParent;
+  source_.FList := bak_FList;
+  source_.FInstance := bak_FInstance;
+  source_.FTag := bak_FTag;
 end;
 
 procedure TZ_JsonObject.Assign(source_: TZ_JsonObject);
@@ -275,6 +305,12 @@ begin
   m64.Position := 0;
   LoadFromStream(m64);
   disposeObject(m64);
+end;
+
+function TZ_JsonObject.Clone: TZ_JsonObject;
+begin
+  Result := TZ_JsonObject.Create;
+  Result.Assign(self);
 end;
 
 procedure TZ_JsonObject.SaveToStream(stream: TCoreClassStream);
@@ -344,6 +380,16 @@ begin
   end;
 end;
 
+function TZ_JsonObject.GetMD5: TMD5;
+var
+  m64: TMS64;
+begin
+  m64 := TMS64.Create;
+  SaveToStream(m64, False);
+  Result := umlStreamMD5(m64);
+  disposeObject(m64);
+end;
+
 procedure TZ_JsonObject.ParseText(Text_: TPascalString);
 var
   buff: TBytes;
@@ -401,11 +447,13 @@ begin
   js.O['obj'].S['fff'] := '999';
 
   DoStatus(js.ToJSONString(True));
+  DoStatus('');
+  DoStatus(js.O['obj'].ToJSONString(True));
 
   m64 := TMS64.Create;
   js.SaveToStream(m64);
   m64.Position := 0;
-  js.LoadFromStream(m64);
+  js.O['obj'].LoadFromStream(m64);
   DoStatus(js.ToJSONString(True));
   js.Free;
 end;
