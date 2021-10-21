@@ -1,5 +1,5 @@
 { ****************************************************************************** }
-{ * ZDB 2.0 automated fragment for Json support, create by.qq600585            * }
+{ * ZDB 2.0 automated fragment for MemoryStream support, create by.qq600585    * }
 { * https://zpascal.net                                                        * }
 { * https://github.com/PassByYou888/zAI                                        * }
 { * https://github.com/PassByYou888/ZServer4D                                  * }
@@ -16,7 +16,7 @@
 { * https://github.com/PassByYou888/InfiniteIoT                                * }
 { * https://github.com/PassByYou888/FastMD5                                    * }
 { ****************************************************************************** }
-unit ZDB2_Json;
+unit ZDB2_MS64;
 
 {$INCLUDE zDefine.inc}
 
@@ -27,18 +27,18 @@ uses CoreClasses,
   FPCGenericStructlist,
 {$ENDIF FPC}
   PascalStrings, UnicodeMixedLib, DoStatusIO, MemoryStream64,
-  DataFrameEngine, ZDB2_Core, CoreCipher, ZJson;
+  DataFrameEngine, ZDB2_Core, CoreCipher;
 
 type
-  TZDB2_List_Json = class;
+  TZDB2_List_MS64 = class;
 
-  TZDB2_Json = class
+  TZDB2_MS64 = class
   private
     FTimeOut: TTimeTick;
     FAlive: TTimeTick;
     FID: Integer;
     FCoreSpace: TZDB2_Core_Space;
-    FData: TZJ;
+    FData: TMS64;
     FData_MD5: TMD5;
   public
     constructor Create(CoreSpace_: TZDB2_Core_Space; ID_: Integer); virtual;
@@ -48,19 +48,19 @@ type
     procedure Save;
     procedure RecycleMemory;
     procedure Remove;
-    function GetData: TZJ;
-    property Data: TZJ read GetData;
+    function GetData: TMS64;
+    property Data: TMS64 read GetData;
     property ID: Integer read FID;
-    property Data_MD5: TMD5 read FData_MD5;
+    // property Data_MD5: TMD5 read FData_MD5;
   end;
 
-  TZDB2_Json_Class = class of TZDB2_Json;
+  TZDB2_MS64_Class = class of TZDB2_MS64;
 
-  TZDB2_List_Json_Decl = {$IFDEF FPC}specialize {$ENDIF FPC} TGenericsList<TZDB2_Json>;
+  TZDB2_List_MS64_Decl = {$IFDEF FPC}specialize {$ENDIF FPC} TGenericsList<TZDB2_MS64>;
 
-  TOnCreate_ZDB2_Json = procedure(Sender: TZDB2_List_Json; Obj: TZDB2_Json) of object;
+  TOnCreate_ZDB2_MS64 = procedure(Sender: TZDB2_List_MS64; Obj: TZDB2_MS64) of object;
 
-  TZDB2_List_Json = class(TZDB2_List_Json_Decl)
+  TZDB2_List_MS64 = class(TZDB2_List_MS64_Decl)
   private type
     THead_ = packed record
       Identifier: Word;
@@ -73,22 +73,22 @@ type
     function GetAutoFreeStream: Boolean;
     procedure SetAutoFreeStream(const Value: Boolean);
   public
-    Json_Class: TZDB2_Json_Class;
+    MS64_Class: TZDB2_MS64_Class;
     TimeOut: TTimeTick;
     DeltaSpace: Int64;
     BlockSize: Word;
     IOHnd: TIOHnd;
     CoreSpace: TZDB2_Core_Space;
-    OnCreateClass: TOnCreate_ZDB2_Json;
-    constructor Create(Json_Class_: TZDB2_Json_Class; OnCreateClass_: TOnCreate_ZDB2_Json; TimeOut_: TTimeTick;
+    OnCreateClass: TOnCreate_ZDB2_MS64;
+    constructor Create(MS64_Class_: TZDB2_MS64_Class; OnCreateClass_: TOnCreate_ZDB2_MS64; TimeOut_: TTimeTick;
       Stream_: TCoreClassStream; DeltaSpace_: Int64; BlockSize_: Word; Cipher_: IZDB2_Cipher);
     destructor Destroy; override;
     property AutoFreeStream: Boolean read GetAutoFreeStream write SetAutoFreeStream;
-    procedure Remove(Obj: TZDB2_Json; RemoveData_: Boolean);
+    procedure Remove(Obj: TZDB2_MS64; RemoveData_: Boolean);
     procedure Delete(Index: Integer; RemoveData_: Boolean);
     procedure Clear(RemoveData_: Boolean);
-    function NewDataFrom(ID_: Integer): TZDB2_Json; overload;
-    function NewData: TZDB2_Json; overload;
+    function NewDataFrom(ID_: Integer): TZDB2_MS64; overload;
+    function NewData: TZDB2_MS64; overload;
     procedure Flush;
     procedure ExtractTo(Stream_: TCoreClassStream);
     procedure Progress;
@@ -98,7 +98,7 @@ type
 
 implementation
 
-constructor TZDB2_Json.Create(CoreSpace_: TZDB2_Core_Space; ID_: Integer);
+constructor TZDB2_MS64.Create(CoreSpace_: TZDB2_Core_Space; ID_: Integer);
 begin
   inherited Create;
   FTimeOut := 5 * 1000;
@@ -109,73 +109,60 @@ begin
   FData_MD5 := NullMD5;
 end;
 
-destructor TZDB2_Json.Destroy;
+destructor TZDB2_MS64.Destroy;
 begin
   Save;
   inherited Destroy;
 end;
 
-procedure TZDB2_Json.Progress;
+procedure TZDB2_MS64.Progress;
 begin
   if GetTimeTick - FAlive > FTimeOut then
       Save;
 end;
 
-procedure TZDB2_Json.Load;
-var
-  m64: TZDB2_Mem;
+procedure TZDB2_MS64.Load;
 begin
   FData_MD5 := NullMD5;
   if FID < 0 then
       exit;
-  m64 := TZDB2_Mem.Create;
-
-  if FCoreSpace.ReadData(m64, FID) then
+  FData.Clear;
+  if FCoreSpace.ReadStream(FData, FID) then
     begin
-      FData_MD5 := umlMD5(m64.Memory, m64.Size);
-      try
-          FData.LoadFromStream(m64.Stream64);
-      except
-      end;
+      FData_MD5 := umlStreamMD5(FData);
     end
   else
       FData.Clear;
-
-  DisposeObject(m64);
 end;
 
-procedure TZDB2_Json.Save;
+procedure TZDB2_MS64.Save;
 var
-  m64: TMS64;
   tmp_md5: TMD5;
   old_ID: Integer;
 begin
   if FData = nil then
       exit;
-  m64 := TMS64.Create;
   try
-    FData.SaveToStream(m64, False);
-    tmp_md5 := umlMD5(m64.Memory, m64.Size);
+    tmp_md5 := umlStreamMD5(FData);
     if umlMD5Compare(FData_MD5, NullMD5) or (not umlMD5Compare(tmp_md5, FData_MD5)) or (FID < 0) then
       begin
         old_ID := FID;
-        FCoreSpace.WriteData(m64.Mem64, FID, False);
+        FCoreSpace.WriteStream(FData, FID);
         FData_MD5 := tmp_md5;
         if old_ID >= 0 then
             FCoreSpace.RemoveData(old_ID, False);
       end;
   except
   end;
-  DisposeObject(m64);
   DisposeObjectAndNil(FData);
 end;
 
-procedure TZDB2_Json.RecycleMemory;
+procedure TZDB2_MS64.RecycleMemory;
 begin
   DisposeObjectAndNil(FData);
 end;
 
-procedure TZDB2_Json.Remove;
+procedure TZDB2_MS64.Remove;
 begin
   if FID >= 0 then
       FCoreSpace.RemoveData(FID, False);
@@ -184,33 +171,33 @@ begin
   FData_MD5 := NullMD5;
 end;
 
-function TZDB2_Json.GetData: TZJ;
+function TZDB2_MS64.GetData: TMS64;
 begin
   if FData = nil then
     begin
-      FData := TZJ.Create;
+      FData := TMS64.Create;
       Load;
     end;
   Result := FData;
   FAlive := GetTimeTick;
 end;
 
-procedure TZDB2_List_Json.DoNoSpace(Trigger: TZDB2_Core_Space; Siz_: Int64; var retry: Boolean);
+procedure TZDB2_List_MS64.DoNoSpace(Trigger: TZDB2_Core_Space; Siz_: Int64; var retry: Boolean);
 begin
   retry := Trigger.AppendSpace(DeltaSpace, BlockSize);
 end;
 
-function TZDB2_List_Json.GetAutoFreeStream: Boolean;
+function TZDB2_List_MS64.GetAutoFreeStream: Boolean;
 begin
   Result := IOHnd.AutoFree;
 end;
 
-procedure TZDB2_List_Json.SetAutoFreeStream(const Value: Boolean);
+procedure TZDB2_List_MS64.SetAutoFreeStream(const Value: Boolean);
 begin
   IOHnd.AutoFree := Value;
 end;
 
-constructor TZDB2_List_Json.Create(Json_Class_: TZDB2_Json_Class; OnCreateClass_: TOnCreate_ZDB2_Json; TimeOut_: TTimeTick;
+constructor TZDB2_List_MS64.Create(MS64_Class_: TZDB2_MS64_Class; OnCreateClass_: TOnCreate_ZDB2_MS64; TimeOut_: TTimeTick;
   Stream_: TCoreClassStream; DeltaSpace_: Int64; BlockSize_: Word; Cipher_: IZDB2_Cipher);
 var
   buff: TZDB2_BlockHandle;
@@ -218,7 +205,7 @@ var
   m64: TMem64;
 begin
   inherited Create;
-  Json_Class := Json_Class_;
+  MS64_Class := MS64_Class_;
   TimeOut := TimeOut_;
   DeltaSpace := DeltaSpace_;
   BlockSize := BlockSize_;
@@ -258,7 +245,7 @@ begin
   SetLength(buff, 0);
 end;
 
-destructor TZDB2_List_Json.Destroy;
+destructor TZDB2_List_MS64.Destroy;
 begin
   Flush;
   Clear(False);
@@ -266,7 +253,7 @@ begin
   inherited Destroy;
 end;
 
-procedure TZDB2_List_Json.Remove(Obj: TZDB2_Json; RemoveData_: Boolean);
+procedure TZDB2_List_MS64.Remove(Obj: TZDB2_MS64; RemoveData_: Boolean);
 begin
   if RemoveData_ then
       Obj.Remove;
@@ -274,7 +261,7 @@ begin
   inherited Remove(Obj);
 end;
 
-procedure TZDB2_List_Json.Delete(Index: Integer; RemoveData_: Boolean);
+procedure TZDB2_List_MS64.Delete(Index: Integer; RemoveData_: Boolean);
 begin
   if (index >= 0) and (index < Count) then
     begin
@@ -285,7 +272,7 @@ begin
     end;
 end;
 
-procedure TZDB2_List_Json.Clear(RemoveData_: Boolean);
+procedure TZDB2_List_MS64.Clear(RemoveData_: Boolean);
 var
   i: Integer;
 begin
@@ -298,21 +285,21 @@ begin
   inherited Clear;
 end;
 
-function TZDB2_List_Json.NewDataFrom(ID_: Integer): TZDB2_Json;
+function TZDB2_List_MS64.NewDataFrom(ID_: Integer): TZDB2_MS64;
 begin
-  Result := Json_Class.Create(CoreSpace, ID_);
+  Result := MS64_Class.Create(CoreSpace, ID_);
   Result.FTimeOut := TimeOut;
   Add(Result);
   if Assigned(OnCreateClass) then
       OnCreateClass(self, Result);
 end;
 
-function TZDB2_List_Json.NewData: TZDB2_Json;
+function TZDB2_List_MS64.NewData: TZDB2_MS64;
 begin
   Result := NewDataFrom(-1);
 end;
 
-procedure TZDB2_List_Json.Flush;
+procedure TZDB2_List_MS64.Flush;
 var
   buff: TZDB2_BlockHandle;
   m64: TMem64;
@@ -338,7 +325,7 @@ begin
   CoreSpace.Save;
 end;
 
-procedure TZDB2_List_Json.ExtractTo(Stream_: TCoreClassStream);
+procedure TZDB2_List_MS64.ExtractTo(Stream_: TCoreClassStream);
 var
   TmpIOHnd: TIOHnd;
   TmpSpace: TZDB2_Core_Space;
@@ -379,7 +366,7 @@ begin
   DisposeObject(TmpSpace);
 end;
 
-procedure TZDB2_List_Json.Progress;
+procedure TZDB2_List_MS64.Progress;
 var
   i: Integer;
 begin
@@ -387,13 +374,13 @@ begin
       Items[i].Progress;
 end;
 
-class procedure TZDB2_List_Json.Test;
+class procedure TZDB2_List_MS64.Test;
 var
   Cipher_: TZDB2_Cipher;
   M64_1, M64_2: TMS64;
   i: Integer;
-  tmp: TZDB2_Json;
-  L: TZDB2_List_Json;
+  tmp: TZDB2_MS64;
+  L: TZDB2_List_MS64;
   tk: TTimeTick;
 begin
   TCompute.Sleep(5000);
@@ -402,38 +389,38 @@ begin
   M64_2 := TMS64.CustomCreate(16 * 1024 * 1024);
 
   tk := GetTimeTick;
-  with TZDB2_List_Json.Create(TZDB2_Json, nil, 5000, M64_1, 64 * 1048576, 200, Cipher_) do
+  with TZDB2_List_MS64.Create(TZDB2_MS64, nil, 5000, M64_1, 64 * 1048576, 200, Cipher_) do
     begin
       AutoFreeStream := False;
-      for i := 0 to 20000 do
+      for i := 0 to 2000 do
         begin
           tmp := NewData();
-          tmp.Data.S['a'] := 'abcdefg';
+          tmp.Data.WriteString('hello world');
           tmp.Save;
         end;
-      DoStatus('build %d of json,time:%dms', [Count, GetTimeTick - tk]);
+      DoStatus('build %d of MS64,time:%dms', [Count, GetTimeTick - tk]);
       Free;
     end;
 
   tk := GetTimeTick;
-  L := TZDB2_List_Json.Create(TZDB2_Json, nil, 5000, M64_1, 64 * 1048576, 200, Cipher_);
+  L := TZDB2_List_MS64.Create(TZDB2_MS64, nil, 5000, M64_1, 64 * 1048576, 200, Cipher_);
   for i := 0 to L.Count - 1 do
     begin
-      if L[i].Data.S['a'] <> 'abcdefg' then
+      if not L[i].Data.ReadString().Same('hello world') then
           DoStatus('%s - test error.', [L.ClassName]);
     end;
-  DoStatus('load %d of json,time:%dms', [L.Count, GetTimeTick - tk]);
+  DoStatus('load %d of MS64,time:%dms', [L.Count, GetTimeTick - tk]);
   L.ExtractTo(M64_2);
   L.Free;
 
   tk := GetTimeTick;
-  L := TZDB2_List_Json.Create(TZDB2_Json, nil, 5000, M64_2, 64 * 1048576, 200, Cipher_);
+  L := TZDB2_List_MS64.Create(TZDB2_MS64, nil, 5000, M64_2, 64 * 1048576, 200, Cipher_);
   for i := 0 to L.Count - 1 do
     begin
-      if L[i].Data.S['a'] <> 'abcdefg' then
+      if not L[i].Data.ReadString().Same('hello world') then
           DoStatus('%s - test error.', [L.ClassName]);
     end;
-  DoStatus('load %d extract stream of json,time:%dms', [L.Count, GetTimeTick - tk]);
+  DoStatus('load %d extract stream of MS64,time:%dms', [L.Count, GetTimeTick - tk]);
   L.Free;
 
   DisposeObject(M64_1);
